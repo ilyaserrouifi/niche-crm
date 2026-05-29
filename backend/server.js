@@ -23,10 +23,14 @@ app.use(express.static(path.join(__dirname, '..')));
 app.use('/page', express.static(path.join(__dirname, '..', 'page')));
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
 
+// Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'API is running', timestamp: new Date().toISOString() });
 });
 
+// ============================================================
+// AUTH ROUTES
+// ============================================================
 app.post('/api/auth/register', upload.none(), async (req, res) => {
     const { full_name, email, username, phone, role, password, avatar_initials } = req.body;
     try {
@@ -70,6 +74,9 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// ============================================================
+// USERS ROUTES
+// ============================================================
 app.get('/api/users/me', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
@@ -100,6 +107,9 @@ app.put('/api/users/me', async (req, res) => {
     }
 });
 
+// ============================================================
+// LEADS
+// ============================================================
 app.get('/api/leads', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM leads ORDER BY created_at DESC');
@@ -109,6 +119,9 @@ app.get('/api/leads', async (req, res) => {
     }
 });
 
+// ============================================================
+// DASHBOARD
+// ============================================================
 app.get('/api/dashboard', async (req, res) => {
     try {
         const pipelineTotal = await pool.query("SELECT COALESCE(SUM(estimated_value), 0) FROM leads WHERE stage NOT IN ('CLOSED_WON', 'CLOSED_LOST')");
@@ -128,6 +141,9 @@ app.get('/api/dashboard', async (req, res) => {
     }
 });
 
+// ============================================================
+// CLIENTS & PROJECTS
+// ============================================================
 app.get('/api/clients', async (req, res) => {
     try {
         const result = await pool.query("SELECT * FROM users WHERE role = 'client' ORDER BY created_at DESC");
@@ -142,6 +158,9 @@ app.get('/api/projects', async (req, res) => {
     } catch (error) { res.status(500).json({ message: error.message }); }
 });
 
+// ============================================================
+// ANALYTICS ROUTES
+// ============================================================
 app.get('/api/analytics/leaderboard', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -169,26 +188,150 @@ app.get('/api/analytics/conversion-funnel', async (req, res) => {
     } catch (error) { res.json([]); }
 });
 
+// ============================================================
+// ANALYTICS - NEW ENDPOINTS FOR CHARTS
+// ============================================================
+
+// Calls trend (7 days)
+app.get('/api/analytics/calls-trend', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT DATE(call_time) as day, COUNT(*) as count
+            FROM calls
+            WHERE call_time > NOW() - INTERVAL '7 days'
+            GROUP BY DATE(call_time)
+            ORDER BY day ASC
+        `);
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const data = days.map(() => 0);
+        result.rows.forEach(row => {
+            const dayIndex = new Date(row.day).getDay();
+            if (dayIndex >= 1 && dayIndex <= 7) data[dayIndex - 1] = parseInt(row.count);
+        });
+        res.json(data);
+    } catch (error) {
+        console.error('Calls trend error:', error);
+        res.json([0,0,0,0,0,0,0]);
+    }
+});
+
+// Revenue trend (30 days)
+app.get('/api/analytics/revenue-trend', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT DATE(created_at) as day, SUM(amount) as revenue
+            FROM invoices
+            WHERE created_at > NOW() - INTERVAL '30 days' AND status = 'paid'
+            GROUP BY DATE(created_at)
+            ORDER BY day ASC
+        `);
+        const data = Array(30).fill(0);
+        result.rows.forEach((row, index) => {
+            if (index < 30) data[index] = parseFloat(row.revenue) || 0;
+        });
+        res.json(data);
+    } catch (error) {
+        console.error('Revenue trend error:', error);
+        res.json(Array(30).fill(0));
+    }
+});
+
+// MRR growth (12 months)
+app.get('/api/analytics/mrr-growth', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT DATE_TRUNC('month', created_at) as month, SUM(amount) as mrr
+            FROM invoices
+            WHERE created_at > NOW() - INTERVAL '12 months' AND status = 'paid'
+            GROUP BY DATE_TRUNC('month', created_at)
+            ORDER BY month ASC
+        `);
+        const data = Array(12).fill(0);
+        result.rows.forEach((row, index) => {
+            if (index < 12) data[index] = parseFloat(row.mrr) || 0;
+        });
+        res.json(data);
+    } catch (error) {
+        console.error('MRR growth error:', error);
+        res.json(Array(12).fill(0));
+    }
+});
+
+// Revenue by niche
+app.get('/api/analytics/revenue-by-niche', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT niche, SUM(estimated_value) as revenue
+            FROM leads
+            WHERE niche IS NOT NULL
+            GROUP BY niche
+        `);
+        const niches = ['SaaS', 'E-commerce', 'HealthTech', 'Energy', 'Other'];
+        const data = niches.map(niche => {
+            const row = result.rows.find(r => r.niche === niche);
+            return row ? parseFloat(row.revenue) : 0;
+        });
+        res.json(data);
+    } catch (error) {
+        console.error('Revenue by niche error:', error);
+        res.json([0,0,0,0,0]);
+    }
+});
+
+// Revenue by service
+app.get('/api/analytics/revenue-by-service', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT project_name as service, SUM(budget) as revenue
+            FROM projects
+            GROUP BY project_name
+        `);
+        const services = ['SEO', 'Ads', 'Design', 'Development', 'Consulting'];
+        const data = services.map(service => {
+            const row = result.rows.find(r => r.service === service);
+            return row ? parseFloat(row.revenue) : 0;
+        });
+        res.json(data);
+    } catch (error) {
+        console.error('Revenue by service error:', error);
+        res.json([0,0,0,0,0]);
+    }
+});
+
+// ============================================================
+// FINANCE ROUTES
+// ============================================================
 app.get('/api/finance/invoices', async (req, res) => {
-    try { const r = await pool.query('SELECT * FROM invoices ORDER BY created_at DESC'); res.json(r.rows); } catch(e) { res.json([]); }
+    try { const r = await pool.query('SELECT * FROM invoices ORDER BY created_at DESC'); res.json(r.rows); } 
+    catch(e) { res.json([]); }
 });
 
 app.get('/api/finance/expenses', async (req, res) => {
-    try { const r = await pool.query('SELECT * FROM expenses ORDER BY expense_date DESC'); res.json(r.rows); } catch(e) { res.json([]); }
+    try { const r = await pool.query('SELECT * FROM expenses ORDER BY expense_date DESC'); res.json(r.rows); } 
+    catch(e) { res.json([]); }
 });
 
+// ============================================================
+// PEOPLE ROUTES
+// ============================================================
 app.get('/api/cold-callers', async (req, res) => {
-    try { const r = await pool.query("SELECT * FROM users WHERE role = 'caller'"); res.json(r.rows); } catch(e) { res.json([]); }
+    try { const r = await pool.query("SELECT * FROM users WHERE role = 'caller'"); res.json(r.rows); } 
+    catch(e) { res.json([]); }
 });
 
 app.get('/api/outreachers', async (req, res) => {
-    try { const r = await pool.query("SELECT * FROM users WHERE role = 'outreacher'"); res.json(r.rows); } catch(e) { res.json([]); }
+    try { const r = await pool.query("SELECT * FROM users WHERE role = 'outreacher'"); res.json(r.rows); } 
+    catch(e) { res.json([]); }
 });
 
 app.get('/api/freelancers', async (req, res) => {
-    try { const r = await pool.query("SELECT * FROM users WHERE role = 'freelancer'"); res.json(r.rows); } catch(e) { res.json([]); }
+    try { const r = await pool.query("SELECT * FROM users WHERE role = 'freelancer'"); res.json(r.rows); } 
+    catch(e) { res.json([]); }
 });
 
+// ============================================================
+// START SERVER
+// ============================================================
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
         console.log(`🚀 Server running on http://localhost:${PORT}`);
