@@ -189,10 +189,46 @@ app.get('/api/analytics/conversion-funnel', async (req, res) => {
 });
 
 // ============================================================
-// ANALYTICS - NEW ENDPOINTS FOR CHARTS
+// ANALYTICS - EXTRA ENDPOINTS
 // ============================================================
 
-// Calls trend (7 days)
+// Close Rate Trend (30 days)
+app.get('/api/analytics/close-rate-trend', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT DATE(created_at) as day, 
+                   COUNT(CASE WHEN stage = 'CLOSED_WON' THEN 1 END) as wins,
+                   COUNT(*) as total
+            FROM leads
+            WHERE created_at > NOW() - INTERVAL '30 days'
+            GROUP BY DATE(created_at)
+            ORDER BY day ASC
+        `);
+        const data = result.rows.map(r => r.total > 0 ? ((r.wins / r.total) * 100).toFixed(1) : 0);
+        res.json(data);
+    } catch (error) { res.json(Array(30).fill(0)); }
+});
+
+// Churn Rate (12 months)
+app.get('/api/analytics/churn-rate', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT DATE_TRUNC('month', created_at) as month,
+                   COUNT(CASE WHEN status = 'inactive' THEN 1 END) as churned,
+                   COUNT(*) as total
+            FROM users WHERE role = 'client'
+            GROUP BY DATE_TRUNC('month', created_at)
+            ORDER BY month ASC
+            LIMIT 12
+        `);
+        const data = result.rows.map(r => r.total > 0 ? ((r.churned / r.total) * 100).toFixed(1) : 0);
+        res.json(data);
+    } catch (error) { res.json(Array(12).fill(0)); }
+});
+
+// ============================================================
+// CALLS TREND (7 days)
+// ============================================================
 app.get('/api/analytics/calls-trend', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -209,10 +245,7 @@ app.get('/api/analytics/calls-trend', async (req, res) => {
             if (dayIndex >= 1 && dayIndex <= 7) data[dayIndex - 1] = parseInt(row.count);
         });
         res.json(data);
-    } catch (error) {
-        console.error('Calls trend error:', error);
-        res.json([0,0,0,0,0,0,0]);
-    }
+    } catch (error) { res.json([0,0,0,0,0,0,0]); }
 });
 
 // Revenue trend (30 days)
@@ -230,10 +263,7 @@ app.get('/api/analytics/revenue-trend', async (req, res) => {
             if (index < 30) data[index] = parseFloat(row.revenue) || 0;
         });
         res.json(data);
-    } catch (error) {
-        console.error('Revenue trend error:', error);
-        res.json(Array(30).fill(0));
-    }
+    } catch (error) { res.json(Array(30).fill(0)); }
 });
 
 // MRR growth (12 months)
@@ -251,10 +281,7 @@ app.get('/api/analytics/mrr-growth', async (req, res) => {
             if (index < 12) data[index] = parseFloat(row.mrr) || 0;
         });
         res.json(data);
-    } catch (error) {
-        console.error('MRR growth error:', error);
-        res.json(Array(12).fill(0));
-    }
+    } catch (error) { res.json(Array(12).fill(0)); }
 });
 
 // Revenue by niche
@@ -272,10 +299,7 @@ app.get('/api/analytics/revenue-by-niche', async (req, res) => {
             return row ? parseFloat(row.revenue) : 0;
         });
         res.json(data);
-    } catch (error) {
-        console.error('Revenue by niche error:', error);
-        res.json([0,0,0,0,0]);
-    }
+    } catch (error) { res.json([0,0,0,0,0]); }
 });
 
 // Revenue by service
@@ -292,10 +316,7 @@ app.get('/api/analytics/revenue-by-service', async (req, res) => {
             return row ? parseFloat(row.revenue) : 0;
         });
         res.json(data);
-    } catch (error) {
-        console.error('Revenue by service error:', error);
-        res.json([0,0,0,0,0]);
-    }
+    } catch (error) { res.json([0,0,0,0,0]); }
 });
 
 // ============================================================
