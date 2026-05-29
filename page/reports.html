@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Reports</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --cyan: #06b6d4;
+      --purple: #818cf8;
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: rgba(13, 16, 23, 0.98);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: white; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+    .nav-section {
+      color: #374151;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 20px 20px 8px 20px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      margin: 2px 12px;
+      border-radius: 10px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item i { width: 20px; font-size: 16px; font-style: normal; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+
+    .logout-wrapper {
+      margin-top: auto;
+      padding: 20px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .logout-btn {
+      width: 100%;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 12px;
+      color: #ef4444;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Main content */
+    .main-content {
+      margin-left: 260px;
+      padding: 24px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .page-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    /* Report type selector */
+    .report-selector {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .report-tab {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 30px;
+      padding: 8px 24px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .report-tab.active {
+      background: rgba(43,47,255,0.15);
+      color: var(--blue-primary);
+      border-color: var(--blue-primary);
+    }
+    .report-tab:hover { background: rgba(43,47,255,0.1); color: white; }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 20px;
+    }
+    .stat-value { font-size: 28px; font-weight: 700; }
+    .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+    .color-purple { color: #818cf8; }
+    .color-green { color: #34d399; }
+    .color-gold { color: #fbbf24; }
+
+    /* Cards grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #9ca3af;
+    }
+    .card-body { padding: 20px 24px; }
+
+    /* Employee list */
+    .employee-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .employee-name { font-size: 13px; font-weight: 500; }
+    .employee-stats { font-size: 11px; color: #6b7280; }
+    .btn-export {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 6px;
+      padding: 4px 12px;
+      color: #818cf8;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .btn-export:hover { background: rgba(43,47,255,0.3); }
+
+    /* Table */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 10px 8px;
+      color: #4b5563;
+      font-size: 10px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .data-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px;
+      color: #d1d5db;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+      .stats-row { grid-template-columns: 1fr; }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Pipeline</span></a>
+  <div class="nav-section">PEOPLE</div>
+  <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
+  <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
+  <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
+  <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  <div class="nav-section">WORK</div>
+  <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
+  <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
+  <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
+  <a href="/page/reports.html" class="nav-item active"><i>📈</i> <span>Reports</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title"><h1>Reports</h1><div class="page-date" id="currentDate"></div></div>
+  </div>
+
+  <!-- Report Type Selector -->
+  <div class="report-selector">
+    <div class="report-tab active" data-type="employee">👥 Individual Reports</div>
+    <div class="report-tab" data-type="financial">💰 Financial Reports</div>
+    <div class="report-tab" data-type="client">🏢 Client Reports</div>
+  </div>
+
+  <!-- Individual Reports Section -->
+  <div id="employeeSection">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value color-purple" id="totalEmployees">0</div><div class="stat-label">TOTAL EMPLOYEES</div></div>
+      <div class="stat-card"><div class="stat-value color-green" id="avgScore">0</div><div class="stat-label">AVG PERFORMANCE SCORE</div></div>
+      <div class="stat-card"><div class="stat-value color-gold" id="totalLeadsGenerated">0</div><div class="stat-label">LEADS GENERATED</div></div>
+    </div>
+
+    <div class="cards-grid">
+      <!-- Cold Callers List -->
+      <div class="card">
+        <div class="card-header"><h3>📞 Cold Callers</h3><span class="btn-export" onclick="exportToCSV('callers')">Export CSV</span></div>
+        <div class="card-body" id="callersList"></div>
+      </div>
+
+      <!-- Outreachers List -->
+      <div class="card">
+        <div class="card-header"><h3>✉️ Outreachers</h3><span class="btn-export" onclick="exportToCSV('outreachers')">Export CSV</span></div>
+        <div class="card-body" id="outreachersList"></div>
+      </div>
+
+      <!-- Freelancers List -->
+      <div class="card">
+        <div class="card-header"><h3>👤 Freelancers</h3><span class="btn-export" onclick="exportToCSV('freelancers')">Export CSV</span></div>
+        <div class="card-body" id="freelancersList"></div>
+      </div>
+
+      <!-- Top Performers -->
+      <div class="card">
+        <div class="card-header"><h3>🏆 Top Performers</h3><span class="btn-export" onclick="exportToCSV('performers')">Export CSV</span></div>
+        <div class="card-body" id="performersList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Financial Reports Section (hidden by default) -->
+  <div id="financialSection" style="display:none">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value color-purple" id="totalRevenueFinance">$0</div><div class="stat-label">TOTAL REVENUE</div></div>
+      <div class="stat-card"><div class="stat-value color-green" id="totalExpensesFinance">$0</div><div class="stat-label">TOTAL EXPENSES</div></div>
+      <div class="stat-card"><div class="stat-value color-gold" id="netProfitFinance">$0</div><div class="stat-label">NET PROFIT</div></div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-header"><h3>💰 Income Statement</h3><span class="btn-export" onclick="exportToCSV('income')">Export CSV</span></div>
+        <div class="card-body"><table class="data-table" id="incomeTable"><thead><tr><th>CLIENT</th><th>AMOUNT</th><th>DATE</th><th>SERVICE</th></tr></thead><tbody id="incomeBody"><tr><td colspan="4" class="empty-state">No income data yet</tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>📉 Expense Statement</h3><span class="btn-export" onclick="exportToCSV('expenses')">Export CSV</span></div>
+        <div class="card-body"><table class="data-table" id="expenseTable"><thead><tr><th>CATEGORY</th><th>AMOUNT</th><th>VENDOR</th><th>DATE</th></tr></thead><tbody id="expenseBody"><tr><td colspan="4" class="empty-state">No expense data yet</tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>📊 P&L Summary</h3><span class="btn-export" onclick="exportToCSV('pl')">Export CSV</span></div>
+        <div class="card-body" id="plSummary"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>📈 MRR Dashboard</h3><span class="btn-export" onclick="exportToCSV('mrr')">Export CSV</span></div>
+        <div class="card-body" id="mrrSummary"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client Reports Section (hidden by default) -->
+  <div id="clientSection" style="display:none">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-value color-purple" id="totalClientsReport">0</div><div class="stat-label">TOTAL CLIENTS</div></div>
+      <div class="stat-card"><div class="stat-value color-green" id="activeClientsReport">0</div><div class="stat-label">ACTIVE CLIENTS</div></div>
+      <div class="stat-card"><div class="stat-value color-gold" id="churnedClientsReport">0</div><div class="stat-label">CHURNED CLIENTS</div></div>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card">
+        <div class="card-header"><h3>📋 All Clients</h3><span class="btn-export" onclick="exportToCSV('allclients')">Export CSV</span></div>
+        <div class="card-body"><table class="data-table" id="clientsTable"><thead><tr><th>COMPANY</th><th>CONTACT</th><th>BUDGET</th><th>STATUS</th><th>SINCE</th></tr></thead><tbody id="clientsBody"><tr><td colspan="5" class="empty-state">No clients yet</tbody></table></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>📄 Client Reports</h3><span class="btn-export" onclick="exportToCSV('clientreports')">Export CSV</span></div>
+        <div class="card-body" id="clientReportsList"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>📊 Client Retention</h3><span class="btn-export" onclick="exportToCSV('retention')">Export CSV</span></div>
+        <div class="card-body" id="retentionSummary"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>💰 Client Revenue</h3><span class="btn-export" onclick="exportToCSV('clientrevenue')">Export CSV</span></div>
+        <div class="card-body" id="clientRevenueList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Check authentication
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+
+  // ============================================================
+  // REPORTS - ALL VALUES ZERO - READY FOR API
+  // ============================================================
+  let currentTab = 'employee';
+  
+  let callers = [];
+  let outreachers = [];
+  let freelancers = [];
+  let incomes = [];
+  let expenses = [];
+  let clients = [];
+
+  function getCallers() { const stored = localStorage.getItem('cold_callers'); return stored ? JSON.parse(stored) : []; }
+  function getOutreachers() { const stored = localStorage.getItem('outreachers_data'); return stored ? JSON.parse(stored) : []; }
+  function getFreelancers() { const stored = localStorage.getItem('freelancers_data_v2'); return stored ? JSON.parse(stored) : []; }
+  function getIncomes() { const stored = localStorage.getItem('finance_incomes'); return stored ? JSON.parse(stored) : []; }
+  function getExpenses() { const stored = localStorage.getItem('finance_expenses'); return stored ? JSON.parse(stored) : []; }
+  function getClients() { const stored = localStorage.getItem('clients_data_v2'); return stored ? JSON.parse(stored) : []; }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  function renderAll() {
+    callers = getCallers();
+    outreachers = getOutreachers();
+    freelancers = getFreelancers();
+    incomes = getIncomes();
+    expenses = getExpenses();
+    clients = getClients();
+    
+    renderEmployeeSection();
+    renderFinancialSection();
+    renderClientSection();
+  }
+
+  function renderEmployeeSection() {
+    const totalEmp = callers.length + outreachers.length + freelancers.length;
+    document.getElementById('totalEmployees').innerText = totalEmp;
+    document.getElementById('avgScore').innerText = '0';
+    document.getElementById('totalLeadsGenerated').innerText = '0';
+    
+    const callersContainer = document.getElementById('callersList');
+    if(callers.length === 0) { callersContainer.innerHTML = '<div class="empty-state">No cold callers yet</div>'; }
+    else { callersContainer.innerHTML = callers.map(c => `<div class="employee-item"><div><div class="employee-name">${escapeHtml(c.name) || 'Unnamed'}</div><div class="employee-stats">Calls: ${c.totalCalls || 0} | Meetings: ${c.meetingsBooked || 0}</div></div><button class="btn-export" onclick="exportEmployeeReport('caller','${c.id}')">Report</button></div>`).join(''); }
+    
+    const outreachersContainer = document.getElementById('outreachersList');
+    if(outreachers.length === 0) { outreachersContainer.innerHTML = '<div class="empty-state">No outreachers yet</div>'; }
+    else { outreachersContainer.innerHTML = outreachers.map(o => `<div class="employee-item"><div><div class="employee-name">${escapeHtml(o.name) || 'Unnamed'}</div><div class="employee-stats">Messages: ${o.totalMessages || 0} | Replies: ${o.totalReplies || 0}</div></div><button class="btn-export" onclick="exportEmployeeReport('outreacher','${o.id}')">Report</button></div>`).join(''); }
+    
+    const freelancersContainer = document.getElementById('freelancersList');
+    if(freelancers.length === 0) { freelancersContainer.innerHTML = '<div class="empty-state">No freelancers yet</div>'; }
+    else { 
+      freelancersContainer.innerHTML = freelancers.map(f => {
+        const { avgRating } = calculateFreelancerScore(f);
+        return `<div class="employee-item"><div><div class="employee-name">${escapeHtml(f.name) || 'Unnamed'}</div><div class="employee-stats">Projects: ${f.workHistory?.length || 0} | Rating: ${avgRating.toFixed(1)}</div></div><button class="btn-export" onclick="exportEmployeeReport('freelancer','${f.id}')">Report</button></div>`;
+      }).join('');
+    }
+    
+    const performersContainer = document.getElementById('performersList');
+    performersContainer.innerHTML = '<div class="empty-state">No performers data yet</div>';
+  }
+  
+  function calculateFreelancerScore(f) {
+    let scoreSum = 0;
+    let count = 0;
+    if(f.workHistory && f.workHistory.length > 0) {
+      f.workHistory.forEach(w => { if(w.rating) { scoreSum += w.rating; count++; } });
+    }
+    const avgRating = count > 0 ? scoreSum / count : 0;
+    return { avgRating };
+  }
+
+  function renderFinancialSection() {
+    const totalRevenue = incomes.reduce((s,i) => s + (parseFloat(i.amount)||0), 0);
+    const totalExpenses = expenses.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
+    const netProfit = totalRevenue - totalExpenses;
+    document.getElementById('totalRevenueFinance').innerText = '$' + totalRevenue.toLocaleString();
+    document.getElementById('totalExpensesFinance').innerText = '$' + totalExpenses.toLocaleString();
+    document.getElementById('netProfitFinance').innerText = '$' + netProfit.toLocaleString();
+    
+    const incomeBody = document.getElementById('incomeBody');
+    if(incomes.length === 0) { incomeBody.innerHTML = '<tr><td colspan="4" class="empty-state">No income data yet</td></tr>'; }
+    else { incomeBody.innerHTML = incomes.map(i => `<tr><td>${escapeHtml(i.client) || '-'}</td><td class="positive">$${(parseFloat(i.amount)||0).toLocaleString()}</td><td>${i.date || '-'}</td><td>${escapeHtml(i.service) || '-'}</td></tr>`).join(''); }
+    
+    const expenseBody = document.getElementById('expenseBody');
+    if(expenses.length === 0) { expenseBody.innerHTML = '<tr><td colspan="4" class="empty-state">No expense data yet</td></tr>'; }
+    else { expenseBody.innerHTML = expenses.map(e => `<tr><td>${e.category || '-'}</td><td class="negative">$${(parseFloat(e.amount)||0).toLocaleString()}</td><td>${escapeHtml(e.vendor) || '-'}</td><td>${e.date || '-'}</td></tr>`).join(''); }
+    
+    document.getElementById('plSummary').innerHTML = `<div class="employee-item"><div>Revenue</div><div>$${totalRevenue.toLocaleString()}</div></div><div class="employee-item"><div>Expenses</div><div>$${totalExpenses.toLocaleString()}</div></div><div class="employee-item"><div><strong>Net Profit</strong></div><div><strong>$${netProfit.toLocaleString()}</strong></div></div><div class="employee-item"><div>Margin</div><div>${totalRevenue > 0 ? ((netProfit/totalRevenue)*100).toFixed(1) : 0}%</div></div>`;
+    document.getElementById('mrrSummary').innerHTML = '<div class="empty-state">No MRR data yet</div>';
+  }
+
+  function renderClientSection() {
+    const totalClients = clients.length;
+    const activeClients = clients.filter(c => c.status === 'active').length;
+    const churned = clients.filter(c => c.status === 'inactive').length;
+    document.getElementById('totalClientsReport').innerText = totalClients;
+    document.getElementById('activeClientsReport').innerText = activeClients;
+    document.getElementById('churnedClientsReport').innerText = churned;
+    
+    const clientsBody = document.getElementById('clientsBody');
+    if(clients.length === 0) { clientsBody.innerHTML = '<tr><td colspan="5" class="empty-state">No clients yet</td></tr>'; }
+    else { clientsBody.innerHTML = clients.map(c => `<tr><td>${escapeHtml(c.company) || '-'}</td><td>${escapeHtml(c.contact) || '-'}</td><td>$${(parseFloat(c.budget)||0).toLocaleString()}</td><td>${c.status || '-'}</td><td>${c.createdAt || '-'}</td></tr>`).join(''); }
+    
+    document.getElementById('clientReportsList').innerHTML = '<div class="empty-state">No client reports yet</div>';
+    document.getElementById('retentionSummary').innerHTML = '<div class="empty-state">No retention data yet</div>';
+    document.getElementById('clientRevenueList').innerHTML = '<div class="empty-state">No revenue data yet</div>';
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('employeeSection').style.display = tab === 'employee' ? 'block' : 'none';
+    document.getElementById('financialSection').style.display = tab === 'financial' ? 'block' : 'none';
+    document.getElementById('clientSection').style.display = tab === 'client' ? 'block' : 'none';
+    document.querySelectorAll('.report-tab').forEach(t => { t.classList.toggle('active', t.dataset.type === tab); });
+  }
+
+  function exportEmployeeReport(type, id) {
+    alert(`Exporting ${type} report for ID: ${id}\n\nThis will generate a PDF/CSV report with:\n- Daily/Weekly/Monthly performance\n- KPIs and metrics\n- Work history\n\nThe backend API will handle the actual file generation.`);
+  }
+
+  function exportToCSV(type) {
+    alert(`Exporting ${type} data to CSV...\n\nThe backend API will generate the CSV file with all relevant data.\n\nEndpoint: GET /api/reports/export/${type}`);
+  }
+
+  function updateDate() { document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+
+  document.querySelectorAll('.report-tab').forEach(tab => { tab.onclick = () => switchTab(tab.dataset.type); });
+  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+
+  updateDate();
+  renderAll();
+</script>
+</body>
+</html>

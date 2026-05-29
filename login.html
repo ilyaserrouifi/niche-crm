@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Connexion</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 1.5rem;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    .container {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .login-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      padding: 48px 40px;
+      backdrop-filter: blur(28px);
+      box-shadow: 0 0 90px rgba(43, 47, 255, 0.07), 0 48px 96px rgba(0, 0, 0, 0.55);
+      width: 100%;
+      animation: fadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(22px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 36px;
+      text-align: center;
+    }
+    .logo-text .name { font-size: 20px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.3px; }
+    .logo-text .sub { font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
+
+    h1 { font-size: 27px; font-weight: 600; letter-spacing: -0.6px; margin-bottom: 6px; text-align: center; }
+    .tagline { color: var(--text-muted); font-size: 13.5px; margin-bottom: 32px; text-align: center; }
+
+    .field { margin-bottom: 18px; }
+    label { display: block; font-size: 11px; font-weight: 500; color: var(--text-muted); margin-bottom: 7px; letter-spacing: 0.5px; text-transform: uppercase; }
+    input { width: 100%; background: rgba(255, 255, 255, 0.042); border: 1px solid var(--border-subtle); border-radius: 11px; padding: 12px 15px; color: var(--text-primary); font-size: 14px; font-family: inherit; outline: none; }
+    input:focus { border-color: rgba(43, 47, 255, 0.55); box-shadow: 0 0 0 3px rgba(43, 47, 255, 0.1); }
+    input::placeholder { color: rgba(255, 255, 255, 0.17); }
+
+    .password-wrapper { position: relative; }
+    .password-toggle {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+    .password-toggle:hover { color: var(--blue-primary); }
+
+    .forgot-row { text-align: right; margin-bottom: 24px; }
+    .forgot-link { color: var(--blue-primary); font-size: 12px; text-decoration: none; cursor: pointer; }
+    .forgot-link:hover { text-decoration: underline; }
+
+    .error-msg { color: var(--error-red); font-size: 12px; margin-bottom: 16px; text-align: center; display: none; }
+    .error-msg.visible { display: block; }
+
+    .btn {
+      width: 100%;
+      padding: 13.5px;
+      background: var(--blue-primary);
+      border: none;
+      border-radius: 11px;
+      color: white;
+      font-size: 14.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 0 30px var(--blue-glow);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn:hover:not(:disabled) { background: var(--blue-hover); transform: translateY(-1px); }
+    .btn:disabled { background: rgba(43, 47, 255, 0.5); cursor: not-allowed; }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      display: none;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .footer { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 24px; }
+    .footer a { color: var(--blue-primary); text-decoration: none; }
+
+    .register-link {
+      text-align: center;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .register-link a {
+      color: var(--blue-primary);
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .register-link a:hover { text-decoration: underline; }
+
+    @media (max-width: 500px) {
+      .login-card { padding: 32px 24px; }
+      h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="container">
+  <div class="login-card">
+    <div class="logo-section">
+      <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+        <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+      </div>
+      <div class="logo-text">
+        <div class="name">Niche</div>
+        <div class="sub">CRM PLATFORM</div>
+      </div>
+    </div>
+
+    <h1>Welcome back</h1>
+    <p class="tagline">Sign in to your workspace</p>
+
+    <form id="loginForm">
+      <div class="field">
+        <label>EMAIL ADDRESS</label>
+        <input type="email" id="email" placeholder="you@agency.com" autocomplete="email" value="admin@niche.com">
+      </div>
+
+      <div class="field">
+        <label>PASSWORD</label>
+        <div class="password-wrapper">
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" value="admin123">
+          <span class="password-toggle" id="togglePassword">👁️</span>
+        </div>
+      </div>
+
+      <div class="forgot-row">
+        <span class="forgot-link" id="forgotLink">Forgot password?</span>
+      </div>
+
+      <div id="errorMsg" class="error-msg"></div>
+
+      <button type="submit" class="btn" id="loginBtn">
+        <span>Sign in</span>
+        <div class="spinner" id="spinner"></div>
+      </button>
+
+      <div class="register-link">
+        <a href="/register.html">Don't have an account? Sign up</a>
+      </div>
+
+      <div class="footer">
+        Need help? <a href="#">Contact support</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // LOGIN API - CONNEXION RÉELLE VERS LE BACKEND
+  // ============================================================
+  const LOGIN_API = '/api/auth/login';
+
+  const emailInput = document.getElementById('email');
+  const passwordInput = document.getElementById('password');
+  const loginBtn = document.getElementById('loginBtn');
+  const spinner = document.getElementById('spinner');
+  const errorMsg = document.getElementById('errorMsg');
+  const togglePassword = document.getElementById('togglePassword');
+  const forgotLink = document.getElementById('forgotLink');
+
+  // Toggle password visibility
+  togglePassword.addEventListener('click', () => {
+    const type = passwordInput.type === 'password' ? 'text' : 'password';
+    passwordInput.type = type;
+    togglePassword.textContent = type === 'password' ? '👁️' : '🙈';
+  });
+
+  // Forgot password
+  forgotLink.addEventListener('click', () => {
+    alert('Contact your administrator to reset your password.');
+  });
+
+  // Clear error when typing
+  emailInput.addEventListener('input', () => errorMsg.classList.remove('visible'));
+  passwordInput.addEventListener('input', () => errorMsg.classList.remove('visible'));
+
+  // Fonction de connexion avec appel API réel
+  async function handleLogin(e) {
+    e.preventDefault();
+
+    const email = emailInput.value.trim();
+    const password = passwordInput.value;
+
+    // Validation
+    if (!email || !password) {
+      errorMsg.textContent = 'Please enter your email and password.';
+      errorMsg.classList.add('visible');
+      return;
+    }
+
+    // Afficher le loader
+    loginBtn.disabled = true;
+    const btnSpan = loginBtn.querySelector('span');
+    btnSpan.style.opacity = '0.5';
+    spinner.style.display = 'inline-block';
+    errorMsg.classList.remove('visible');
+
+    try {
+      // Appel API vers le backend
+      const response = await fetch(LOGIN_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Stocker les informations dans localStorage
+        localStorage.setItem('niche_token', data.token);
+        localStorage.setItem('niche_role', data.role);
+        localStorage.setItem('niche_name', data.name);
+        localStorage.setItem('niche_email', data.email);
+
+        // Redirection vers le dashboard
+        window.location.href = '/index.html';
+      } else {
+        // Afficher l'erreur
+        errorMsg.textContent = data.message || 'Invalid email or password.';
+        errorMsg.classList.add('visible');
+        loginBtn.disabled = false;
+        btnSpan.style.opacity = '1';
+        spinner.style.display = 'none';
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      errorMsg.textContent = 'Connection error. Please try again.';
+      errorMsg.classList.add('visible');
+      loginBtn.disabled = false;
+      btnSpan.style.opacity = '1';
+      spinner.style.display = 'none';
+    }
+  }
+
+  // Attacher l'événement au formulaire
+  document.getElementById('loginForm').addEventListener('submit', handleLogin);
+
+  // Support de la touche Entrée
+  passwordInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleLogin(e);
+  });
+  emailInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') handleLogin(e);
+  });
+
+  // Vérifier si l'utilisateur est déjà connecté
+  if (localStorage.getItem('niche_token')) {
+    // Rediriger vers le dashboard
+    window.location.href = '/index.html';
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Outreachers Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: rgba(13, 16, 23, 0.98);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: white; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+    .nav-section {
+      color: #374151;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 20px 20px 8px 20px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      margin: 2px 12px;
+      border-radius: 10px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item i { width: 20px; font-size: 16px; font-style: normal; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+
+    .logout-wrapper {
+      margin-top: auto;
+      padding: 20px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .logout-btn {
+      width: 100%;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 12px;
+      color: #ef4444;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Main content */
+    .main-content {
+      margin-left: 260px;
+      padding: 24px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .page-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .btn-add {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 20px;
+    }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+    .color-violet { color: #818cf8; }
+    .color-green { color: #34d399; }
+    .color-gold { color: #fbbf24; }
+    .color-emerald { color: #10b981; }
+
+    /* Outreachers grid */
+    .outreachers-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .outreacher-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      background: rgba(43,47,255,0.1);
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .card-header h3 { font-size: 18px; font-weight: 600; color: white; }
+    .score-badge { padding: 6px 14px; border-radius: 30px; font-size: 14px; font-weight: 700; }
+    .score-A { background: rgba(16,185,129,0.2); color: #10b981; }
+    .score-B { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .score-C { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    .score-D { background: rgba(239,68,68,0.2); color: #ef4444; }
+
+    .card-body { padding: 24px; }
+    .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle); }
+    .info-item .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-item .value { font-size: 14px; font-weight: 500; color: white; margin-top: 4px; }
+
+    .kpis-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+    .kpi-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; text-align: center; }
+    .kpi-number { font-size: 22px; font-weight: 700; }
+    .kpi-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+    .kpi-target { font-size: 9px; color: #4b5563; margin-top: 2px; }
+
+    .tools-row { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 12px 16px; margin: 16px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .tool-item { font-size: 12px; }
+    .tool-item strong { color: #fbbf24; }
+
+    .action-buttons { display: flex; gap: 12px; margin-top: 16px; }
+    .btn-message-log, .btn-add-message, .btn-edit, .btn-delete {
+      flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);
+      border-radius: 8px; color: #9ca3af; font-size: 12px; cursor: pointer; text-align: center; transition: var(--transition);
+    }
+    .btn-message-log:hover, .btn-add-message:hover, .btn-edit:hover { background: rgba(43,47,255,0.15); color: white; }
+    .btn-delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+    .modal { background: #111520; border: 1px solid var(--border-subtle); border-radius: 20px; width: 700px; max-width: 90%; max-height: 85vh; overflow-y: auto; padding: 28px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { font-size: 20px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: #6b7280; font-size: 20px; cursor: pointer; }
+    .field-group { margin-bottom: 14px; }
+    .field-label { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+    .field-input, .field-select, .field-textarea { width: 100%; background: #1a1f2e; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; color: white; font-size: 13px; font-family: inherit; }
+    .field-textarea { min-height: 80px; resize: vertical; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+    .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px; color: #9ca3af; cursor: pointer; }
+    .btn-save { background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; border-radius: 8px; padding: 8px 20px; color: white; font-weight: 600; cursor: pointer; }
+
+    /* Messages Table */
+    .messages-table { width: 100%; border-collapse: collapse; }
+    .messages-table th { text-align: left; padding: 10px 8px; color: #4b5563; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid var(--border-subtle); }
+    .messages-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: #d1d5db; vertical-align: top; }
+    .reply-yes { color: #10b981; font-weight: 600; }
+    .reply-no { color: #ef4444; }
+    .message-preview { max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .empty-state { text-align: center; padding: 40px; color: #6b7280; }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .info-grid { grid-template-columns: repeat(2,1fr); }
+      .kpis-grid { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Pipeline</span></a>
+  <div class="nav-section">PEOPLE</div>
+  <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
+  <a href="/page/outreachers.html" class="nav-item active"><i>✉️</i> <span>Outreachers</span></a>
+  <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
+  <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  <div class="nav-section">WORK</div>
+  <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
+  <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
+  <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
+  <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title"><h1>Outreachers</h1><div class="page-date" id="currentDate"></div></div>
+    <button class="btn-add" id="addOutreacherBtn">+ Add Outreacher</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value color-violet" id="totalOutreachers">0</div><div class="stat-label">TOTAL OUTREACHERS</div></div>
+    <div class="stat-card"><div class="stat-value color-green" id="activeOutreachers">0</div><div class="stat-label">ACTIVE</div></div>
+    <div class="stat-card"><div class="stat-value color-gold" id="totalMessages">0</div><div class="stat-label">MESSAGES SENT</div></div>
+    <div class="stat-card"><div class="stat-value color-emerald" id="totalReplies">0</div><div class="stat-label">REPLIES RECEIVED</div></div>
+  </div>
+
+  <div id="outreachersContainer" class="outreachers-grid"></div>
+</div>
+
+<!-- Modal Add/Edit Outreacher -->
+<div id="outreacherModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modalTitle">Add Outreacher</h3><button class="modal-close" id="closeModalBtn">✕</button></div>
+    <div id="modalBody"></div>
+    <div id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- Modal Message Log -->
+<div id="messageLogModal" class="modal-overlay">
+  <div class="modal" style="width: 900px;">
+    <div class="modal-header"><h3 id="messageLogTitle">Message Log</h3><button class="modal-close" id="closeLogModalBtn">✕</button></div>
+    <div id="messageLogBody"></div>
+    <div class="modal-footer"><button class="btn-cancel" id="closeLogFooterBtn">Close</button></div>
+  </div>
+</div>
+
+<script>
+  // Check authentication
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+
+  // ============================================================
+  // COLD OUTREACHERS MANAGEMENT - ALL VALUES ZERO - READY FOR API
+  // ============================================================
+  let outreachers = [];
+  let currentOutreacherId = null;
+
+  function getOutreachers() { const stored = localStorage.getItem('outreachers_data'); return stored ? JSON.parse(stored) : []; }
+  function saveOutreachers() { localStorage.setItem('outreachers_data', JSON.stringify(outreachers)); renderAll(); }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  function calculateScore(o) {
+    const emailTarget = 200;
+    const linkedinTarget = 80;
+    const replyTarget = 10;
+    const emailScore = Math.min(100, ((o.todayEmails || 0) / emailTarget) * 100);
+    const linkedinScore = Math.min(100, ((o.todayLinkedIn || 0) / linkedinTarget) * 100);
+    const replyScore = Math.min(100, ((o.replyRate || 0) / replyTarget) * 100);
+    const avgScore = (emailScore + linkedinScore + replyScore) / 3;
+    if(avgScore >= 90) return 'A';
+    if(avgScore >= 70) return 'B';
+    if(avgScore >= 50) return 'C';
+    return 'D';
+  }
+
+  function updateOutreacherStats(o) {
+    const messages = o.messages || [];
+    const today = new Date().toDateString();
+    const todayMessages = messages.filter(m => new Date(m.timestamp).toDateString() === today);
+    o.todayEmails = todayMessages.filter(m => m.channel === 'Email').length;
+    o.todayLinkedIn = todayMessages.filter(m => m.channel === 'LinkedIn').length;
+    o.totalMessages = messages.length;
+    o.totalReplies = messages.filter(m => m.reply === true || m.reply === 'Y' || m.reply === 'Yes').length;
+    o.replyRate = o.totalMessages > 0 ? (o.totalReplies / o.totalMessages) * 100 : 0;
+    o.meetingsBooked = messages.filter(m => m.nextStep && m.nextStep.toLowerCase().includes('meeting')).length;
+    o.revenueGenerated = messages.reduce((sum, m) => sum + (parseFloat(m.revenue) || 0), 0);
+    o.score = calculateScore(o);
+  }
+
+  function addOutreacher(outreacher) {
+    outreacher.id = Date.now().toString();
+    outreacher.createdAt = new Date().toISOString();
+    outreacher.messages = [];
+    outreacher.status = 'active';
+    outreacher.todayEmails = 0;
+    outreacher.todayLinkedIn = 0;
+    outreacher.totalMessages = 0;
+    outreacher.totalReplies = 0;
+    outreacher.replyRate = 0;
+    outreacher.meetingsBooked = 0;
+    outreacher.revenueGenerated = 0;
+    outreacher.score = 'D';
+    outreacher.tools = { instantly: '', expandi: '', apollo: '', emailAccounts: '' };
+    outreachers.push(outreacher);
+    saveOutreachers();
+  }
+
+  function updateOutreacher(id, data) {
+    const idx = outreachers.findIndex(o => o.id === id);
+    if(idx !== -1) {
+      outreachers[idx] = { ...outreachers[idx], ...data };
+      saveOutreachers();
+    }
+  }
+
+  function deleteOutreacher(id) { outreachers = outreachers.filter(o => o.id !== id); saveOutreachers(); }
+
+  function addMessage(outreacherId, message) {
+    const outreacher = outreachers.find(o => o.id === outreacherId);
+    if(outreacher) {
+      message.id = Date.now().toString();
+      message.timestamp = new Date().toISOString();
+      outreacher.messages = outreacher.messages || [];
+      outreacher.messages.unshift(message);
+      updateOutreacherStats(outreacher);
+      saveOutreachers();
+    }
+  }
+
+  function renderAll() { updateStats(); renderOutreachers(); }
+
+  function updateStats() {
+    document.getElementById('totalOutreachers').innerText = outreachers.length;
+    document.getElementById('activeOutreachers').innerText = outreachers.filter(o => o.status === 'active').length;
+    document.getElementById('totalMessages').innerText = outreachers.reduce((s,o) => s + (o.totalMessages || 0), 0);
+    document.getElementById('totalReplies').innerText = outreachers.reduce((s,o) => s + (o.totalReplies || 0), 0);
+  }
+
+  function renderOutreachers() {
+    const container = document.getElementById('outreachersContainer');
+    if(outreachers.length === 0) { container.innerHTML = '<div class="empty-state">No outreachers yet. Click "+ Add Outreacher" to get started.</div>'; return; }
+    container.innerHTML = outreachers.map(o => {
+      const tools = o.tools || {};
+      return `
+        <div class="outreacher-card">
+          <div class="card-header"><h3>${escapeHtml(o.name) || 'Unnamed'}</h3><div class="score-badge score-${o.score}">${o.score}</div></div>
+          <div class="card-body">
+            <div class="info-grid">
+              <div class="info-item"><div class="label">USERNAME</div><div class="value">${escapeHtml(o.username) || '-'}</div></div>
+              <div class="info-item"><div class="label">PHONE</div><div class="value">${escapeHtml(o.phone) || '-'}</div></div>
+              <div class="info-item"><div class="label">EMAIL</div><div class="value">${escapeHtml(o.email) || '-'}</div></div>
+              <div class="info-item"><div class="label">CHANNELS</div><div class="value">${escapeHtml(o.channels) || 'Email, LinkedIn'}</div></div>
+            </div>
+            <div class="info-grid">
+              <div class="info-item"><div class="label">SALARY</div><div class="value">$${o.salary || 0}/month</div></div>
+              <div class="info-item"><div class="label">COMMISSION</div><div class="value">$${o.commissionPerMeeting || 0}/meeting</div></div>
+              <div class="info-item"><div class="label">STATUS</div><div class="value">${o.status || 'active'}</div></div>
+              <div class="info-item"><div class="label">SCORE</div><div class="value">${o.score}</div></div>
+            </div>
+            <div class="kpis-grid">
+              <div class="kpi-card"><div class="kpi-number">${o.todayEmails || 0}</div><div class="kpi-label">Emails Sent</div><div class="kpi-target">Target: 200</div></div>
+              <div class="kpi-card"><div class="kpi-number">${o.todayLinkedIn || 0}</div><div class="kpi-label">LinkedIn Msgs</div><div class="kpi-target">Target: 80</div></div>
+              <div class="kpi-card"><div class="kpi-number">${(o.replyRate || 0).toFixed(1)}%</div><div class="kpi-label">Reply Rate</div><div class="kpi-target">Target: 8-12%</div></div>
+              <div class="kpi-card"><div class="kpi-number">${o.meetingsBooked || 0}</div><div class="kpi-label">Meetings</div></div>
+              <div class="kpi-card"><div class="kpi-number">$${(o.revenueGenerated || 0).toLocaleString()}</div><div class="kpi-label">Revenue</div></div>
+            </div>
+            <div class="tools-row">
+              <div class="tool-item">🛠️ <strong>Instantly:</strong> ${escapeHtml(tools.instantly) || 'Not set'}</div>
+              <div class="tool-item">🚀 <strong>Expandi:</strong> ${escapeHtml(tools.expandi) || 'Not set'}</div>
+              <div class="tool-item">📡 <strong>Apollo:</strong> ${escapeHtml(tools.apollo) || 'Not set'}</div>
+              <div class="tool-item">📧 <strong>Email:</strong> ${escapeHtml(tools.emailAccounts) || 'Not set'}</div>
+            </div>
+            <div class="action-buttons">
+              <div class="btn-message-log" onclick="openMessageLog('${o.id}')">📨 Message Log (${o.messages?.length || 0})</div>
+              <div class="btn-add-message" onclick="openAddMessageModal('${o.id}')">+ Add Message</div>
+            </div>
+            <div class="action-buttons" style="margin-top:8px">
+              <div class="btn-edit" onclick="openEditOutreacher('${o.id}')">✏️ Edit</div>
+              <div class="btn-delete" onclick="if(confirm('Delete this outreacher?')) deleteOutreacher('${o.id}')">🗑️ Delete</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openAddOutreacherModal() { currentOutreacherId = null; document.getElementById('modalTitle').innerText = 'Add Outreacher'; document.getElementById('modalBody').innerHTML = getOutreacherFormHtml({}); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Outreacher</button></div>`; document.getElementById('outreacherModal').style.display = 'flex'; attachOutreacherModalEvents(true); }
+  
+  function openEditOutreacher(id) { currentOutreacherId = id; const o = outreachers.find(o => o.id === id); document.getElementById('modalTitle').innerText = 'Edit Outreacher'; document.getElementById('modalBody').innerHTML = getOutreacherFormHtml(o); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; document.getElementById('outreacherModal').style.display = 'flex'; attachOutreacherModalEvents(false); }
+
+  function getOutreacherFormHtml(o) {
+    const tools = o.tools || {};
+    return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+      <div><div class="field-group"><label class="field-label">FULL NAME</label><input class="field-input" id="oName" value="${escapeHtml(o.name || '')}"></div>
+      <div class="field-group"><label class="field-label">USERNAME</label><input class="field-input" id="oUsername" value="${escapeHtml(o.username || '')}"></div>
+      <div class="field-group"><label class="field-label">PHONE</label><input class="field-input" id="oPhone" value="${escapeHtml(o.phone || '')}"></div>
+      <div class="field-group"><label class="field-label">EMAIL</label><input class="field-input" id="oEmail" value="${escapeHtml(o.email || '')}"></div>
+      <div class="field-group"><label class="field-label">CHANNELS</label><input class="field-input" id="oChannels" value="${escapeHtml(o.channels || 'Email, LinkedIn')}"></div>
+      <div class="field-group"><label class="field-label">SALARY ($/month)</label><input class="field-input" type="number" id="oSalary" value="${o.salary || 0}"></div></div>
+      <div><div class="field-group"><label class="field-label">COMMISSION PER MEETING ($)</label><input class="field-input" type="number" id="oCommission" value="${o.commissionPerMeeting || 0}"></div>
+      <div class="field-group"><label class="field-label">INSTANTLY ACCOUNT</label><input class="field-input" id="oToolsInstantly" value="${escapeHtml(tools.instantly || '')}"></div>
+      <div class="field-group"><label class="field-label">EXPANDI ACCOUNT</label><input class="field-input" id="oToolsExpandi" value="${escapeHtml(tools.expandi || '')}"></div>
+      <div class="field-group"><label class="field-label">APOLLO ACCESS</label><input class="field-input" id="oToolsApollo" value="${escapeHtml(tools.apollo || '')}"></div>
+      <div class="field-group"><label class="field-label">EMAIL ACCOUNTS</label><input class="field-input" id="oToolsEmail" value="${escapeHtml(tools.emailAccounts || '')}"></div>
+      <div class="field-group"><label class="field-label">STATUS</label><select class="field-select" id="oStatus"><option ${o.status==='active'?'selected':''}>active</option><option ${o.status==='inactive'?'selected':''}>inactive</option></select></div></div>
+    </div>`;
+  }
+
+  function attachOutreacherModalEvents(isAdd) {
+    document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('outreacherModal').style.display = 'none');
+    document.getElementById('saveModalBtn')?.addEventListener('click', () => {
+      const data = {
+        name: document.getElementById('oName')?.value,
+        username: document.getElementById('oUsername')?.value,
+        phone: document.getElementById('oPhone')?.value,
+        email: document.getElementById('oEmail')?.value,
+        channels: document.getElementById('oChannels')?.value,
+        salary: parseFloat(document.getElementById('oSalary')?.value) || 0,
+        commissionPerMeeting: parseFloat(document.getElementById('oCommission')?.value) || 0,
+        tools: {
+          instantly: document.getElementById('oToolsInstantly')?.value,
+          expandi: document.getElementById('oToolsExpandi')?.value,
+          apollo: document.getElementById('oToolsApollo')?.value,
+          emailAccounts: document.getElementById('oToolsEmail')?.value
+        },
+        status: document.getElementById('oStatus')?.value
+      };
+      if(isAdd) addOutreacher(data);
+      else updateOutreacher(currentOutreacherId, data);
+      document.getElementById('outreacherModal').style.display = 'none';
+    });
+  }
+
+  function openMessageLog(outreacherId) {
+    const outreacher = outreachers.find(o => o.id === outreacherId);
+    document.getElementById('messageLogTitle').innerText = `Message Log — ${outreacher?.name || 'Outreacher'}`;
+    const messages = outreacher?.messages || [];
+    if(messages.length === 0) { document.getElementById('messageLogBody').innerHTML = '<div class="empty-state">No messages sent yet.</div>'; }
+    else {
+      let html = '<table class="messages-table"><thead><tr><th>Company</th><th>Channel</th><th>Message</th><th>Date</th><th>Reply</th><th>Reply Content</th><th>Next Step</th></tr></thead><tbody>';
+      messages.forEach(m => {
+        html += `<tr>
+          <td>${escapeHtml(m.company) || '-'}</td>
+          <td>${m.channel || '-'}</td>
+          <td class="message-preview" title="${escapeHtml(m.messageText) || ''}">${(escapeHtml(m.messageText) || '-').substring(0,50)}${(m.messageText?.length||0)>50?'...':''}</td>
+          <td>${new Date(m.timestamp).toLocaleDateString()}</td>
+          <td class="${m.reply === 'Y' || m.reply === true ? 'reply-yes' : 'reply-no'}">${m.reply === 'Y' || m.reply === true ? '✓ Yes' : '✗ No'}</td>
+          <td class="message-preview">${(escapeHtml(m.replyContent) || '-').substring(0,50)}</td>
+          <td>${escapeHtml(m.nextStep) || '-'}</td>
+        </table>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('messageLogBody').innerHTML = html;
+    }
+    document.getElementById('messageLogModal').style.display = 'flex';
+  }
+
+  function openAddMessageModal(outreacherId) {
+    currentOutreacherId = outreacherId;
+    document.getElementById('modalTitle').innerText = 'Add Outreach Message';
+    document.getElementById('modalBody').innerHTML = `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+        <div><div class="field-group"><label class="field-label">COMPANY</label><input class="field-input" id="msgCompany"></div>
+        <div class="field-group"><label class="field-label">CHANNEL</label><select class="field-select" id="msgChannel"><option>Email</option><option>LinkedIn</option><option>Instagram</option><option>WhatsApp</option></select></div>
+        <div class="field-group"><label class="field-label">SUBJECT LINE</label><input class="field-input" id="msgSubject"></div>
+        <div class="field-group"><label class="field-label">REPLY RECEIVED?</label><select class="field-select" id="msgReply"><option value="N">No</option><option value="Y">Yes</option></select></div></div>
+        <div><div class="field-group"><label class="field-label">MESSAGE TEXT</label><textarea class="field-textarea" id="msgText" rows="4"></textarea></div>
+        <div class="field-group"><label class="field-label">REPLY CONTENT</label><textarea class="field-textarea" id="msgReplyContent" rows="2"></textarea></div>
+        <div class="field-group"><label class="field-label">NEXT STEP</label><input class="field-input" id="msgNextStep" placeholder="Follow-up / Meeting scheduled / etc"></div></div>
+      </div>`;
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveMessageBtn">Add Message</button></div>`;
+    document.getElementById('outreacherModal').style.display = 'flex';
+    document.getElementById('saveMessageBtn')?.addEventListener('click', () => {
+      const messageData = {
+        company: document.getElementById('msgCompany')?.value,
+        channel: document.getElementById('msgChannel')?.value,
+        subjectLine: document.getElementById('msgSubject')?.value,
+        messageText: document.getElementById('msgText')?.value,
+        reply: document.getElementById('msgReply')?.value === 'Y',
+        replyContent: document.getElementById('msgReplyContent')?.value,
+        nextStep: document.getElementById('msgNextStep')?.value
+      };
+      addMessage(currentOutreacherId, messageData);
+      document.getElementById('outreacherModal').style.display = 'none';
+    });
+    document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('outreacherModal').style.display = 'none');
+  }
+
+  function updateDate() { document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+
+  document.getElementById('addOutreacherBtn').onclick = openAddOutreacherModal;
+  document.getElementById('closeModalBtn').onclick = () => document.getElementById('outreacherModal').style.display = 'none';
+  document.getElementById('closeLogModalBtn').onclick = () => document.getElementById('messageLogModal').style.display = 'none';
+  document.getElementById('closeLogFooterBtn').onclick = () => document.getElementById('messageLogModal').style.display = 'none';
+  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+
+  outreachers = getOutreachers();
+  updateDate();
+  renderAll();
+</script>
+</body>
+</html>

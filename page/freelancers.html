@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Freelancers Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --cyan: #06b6d4;
+      --purple: #818cf8;
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: rgba(13, 16, 23, 0.98);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: white; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+    .nav-section {
+      color: #374151;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 20px 20px 8px 20px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      margin: 2px 12px;
+      border-radius: 10px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item i { width: 20px; font-size: 16px; font-style: normal; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+
+    .logout-wrapper {
+      margin-top: auto;
+      padding: 20px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .logout-btn {
+      width: 100%;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 12px;
+      color: #ef4444;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Main content */
+    .main-content {
+      margin-left: 260px;
+      padding: 24px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .page-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .btn-add {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 20px;
+    }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+    .color-violet { color: #818cf8; }
+    .color-green { color: #34d399; }
+    .color-gold { color: #fbbf24; }
+    .color-emerald { color: #10b981; }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .filter-chip {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 30px;
+      padding: 6px 16px;
+      color: #9ca3af;
+      font-size: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .filter-chip:hover { background: rgba(43,47,255,0.1); color: white; }
+
+    /* Freelancers grid */
+    .freelancers-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .freelancer-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .card-header {
+      background: rgba(43,47,255,0.1);
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .card-header h3 { font-size: 18px; font-weight: 600; color: white; }
+    .score-badge { padding: 6px 14px; border-radius: 30px; font-size: 14px; font-weight: 700; }
+    .score-A { background: rgba(16,185,129,0.2); color: #10b981; }
+    .score-B { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .score-C { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    .score-D { background: rgba(239,68,68,0.2); color: #ef4444; }
+
+    .card-body { padding: 24px; }
+    .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle); }
+    .info-item .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-item .value { font-size: 14px; font-weight: 500; color: white; margin-top: 4px; }
+
+    .skills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .skill-tag { background: rgba(43,47,255,0.15); padding: 4px 12px; border-radius: 20px; font-size: 11px; color: #818cf8; }
+
+    .stats-detail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat-detail-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; text-align: center; }
+    .stat-detail-number { font-size: 22px; font-weight: 700; }
+    .stat-detail-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+    .work-history { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 12px 16px; margin: 16px 0; }
+    .work-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; }
+    .work-item:last-child { border-bottom: none; }
+
+    .action-buttons { display: flex; gap: 12px; margin-top: 16px; }
+    .btn-tasks, .btn-history, .btn-edit, .btn-delete {
+      flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);
+      border-radius: 8px; color: #9ca3af; font-size: 12px; cursor: pointer; text-align: center; transition: var(--transition);
+    }
+    .btn-tasks:hover, .btn-history:hover, .btn-edit:hover { background: rgba(43,47,255,0.15); color: white; }
+    .btn-delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+    .modal { background: #111520; border: 1px solid var(--border-subtle); border-radius: 20px; width: 750px; max-width: 90%; max-height: 85vh; overflow-y: auto; padding: 28px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { font-size: 20px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: #6b7280; font-size: 20px; cursor: pointer; }
+    .field-group { margin-bottom: 14px; }
+    .field-label { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+    .field-input, .field-select, .field-textarea { width: 100%; background: #1a1f2e; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; color: white; font-size: 13px; font-family: inherit; }
+    .field-textarea { min-height: 80px; resize: vertical; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+    .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px; color: #9ca3af; cursor: pointer; }
+    .btn-save { background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; border-radius: 8px; padding: 8px 20px; color: white; font-weight: 600; cursor: pointer; }
+
+    /* Task Card Table */
+    .tasks-table { width: 100%; border-collapse: collapse; }
+    .tasks-table th { text-align: left; padding: 10px 8px; color: #4b5563; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid var(--border-subtle); }
+    .tasks-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: #d1d5db; }
+    .task-status { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 10px; }
+    .status-todo { background: rgba(107,114,128,0.2); color: #9ca3af; }
+    .status-progress { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .status-review { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    .status-done { background: rgba(16,185,129,0.2); color: #10b981; }
+    .priority-high { color: #ef4444; font-weight: 600; }
+    .priority-medium { color: #f59e0b; }
+    .priority-low { color: #10b981; }
+
+    .empty-state { text-align: center; padding: 40px; color: #6b7280; }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .info-grid { grid-template-columns: repeat(2,1fr); }
+      .stats-detail { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Pipeline</span></a>
+  <div class="nav-section">PEOPLE</div>
+  <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
+  <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
+  <a href="/page/freelancers.html" class="nav-item active"><i>👤</i> <span>Freelancers</span></a>
+  <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  <div class="nav-section">WORK</div>
+  <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
+  <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
+  <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
+  <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title"><h1>Freelancers</h1><div class="page-date" id="currentDate"></div></div>
+    <button class="btn-add" id="addFreelancerBtn">+ Add Freelancer</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value color-violet" id="totalFreelancers">0</div><div class="stat-label">TOTAL FREELANCERS</div></div>
+    <div class="stat-card"><div class="stat-value color-green" id="activeFreelancers">0</div><div class="stat-label">ACTIVE</div></div>
+    <div class="stat-card"><div class="stat-value color-gold" id="avgRating">0.0</div><div class="stat-label">AVG RATING</div></div>
+    <div class="stat-card"><div class="stat-value color-emerald" id="totalProjects">0</div><div class="stat-label">PROJECTS DONE</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-chip">🔍 All Skills</div>
+    <div class="filter-chip">⭐ Rating: Highest First</div>
+    <div class="filter-chip">💰 Rate: Low to High</div>
+    <div class="filter-chip">📊 Available Only</div>
+  </div>
+
+  <div id="freelancersContainer" class="freelancers-grid"></div>
+</div>
+
+<!-- Modal Add/Edit Freelancer -->
+<div id="freelancerModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modalTitle">Add Freelancer</h3><button class="modal-close" id="closeModalBtn">✕</button></div>
+    <div id="modalBody"></div>
+    <div id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- Modal Tasks -->
+<div id="tasksModal" class="modal-overlay">
+  <div class="modal" style="width: 850px;">
+    <div class="modal-header"><h3 id="tasksTitle">Tasks</h3><button class="modal-close" id="closeTasksModalBtn">✕</button></div>
+    <div id="tasksBody"></div>
+    <div class="modal-footer"><button class="btn-cancel" id="closeTasksFooterBtn">Close</button><button class="btn-save" id="addTaskBtn">+ Add Task</button></div>
+  </div>
+</div>
+
+<!-- Modal Work History -->
+<div id="historyModal" class="modal-overlay">
+  <div class="modal" style="width: 700px;">
+    <div class="modal-header"><h3 id="historyTitle">Work History</h3><button class="modal-close" id="closeHistoryBtn">✕</button></div>
+    <div id="historyBody"></div>
+    <div class="modal-footer"><button class="btn-cancel" id="closeHistoryFooterBtn">Close</button><button class="btn-save" id="addHistoryBtn">+ Add Project</button></div>
+  </div>
+</div>
+
+<script>
+  // Check authentication
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+
+  // ============================================================
+  // FREELANCERS MANAGEMENT - ALL VALUES ZERO - READY FOR API
+  // ============================================================
+  let freelancers = [];
+  let currentFreelancerId = null;
+  let currentTasksFreelancerId = null;
+  let currentHistoryFreelancerId = null;
+
+  function getFreelancers() { const stored = localStorage.getItem('freelancers_data_v2'); return stored ? JSON.parse(stored) : []; }
+  function saveFreelancers() { localStorage.setItem('freelancers_data_v2', JSON.stringify(freelancers)); renderAll(); }
+
+  function calculateScore(f) {
+    let scoreSum = 0;
+    let count = 0;
+    if(f.workHistory && f.workHistory.length > 0) {
+      f.workHistory.forEach(w => { if(w.rating) { scoreSum += w.rating; count++; } });
+    }
+    const avgRating = count > 0 ? scoreSum / count : 0;
+    let score = 'D';
+    if(avgRating >= 4.5) score = 'A';
+    else if(avgRating >= 3.5) score = 'B';
+    else if(avgRating >= 2.5) score = 'C';
+    return { score, avgRating };
+  }
+
+  function addFreelancer(freelancer) {
+    freelancer.id = Date.now().toString();
+    freelancer.createdAt = new Date().toISOString().split('T')[0];
+    freelancer.workHistory = [];
+    freelancer.tasks = [];
+    freelancer.revisionRequests = 0;
+    freelancer.status = 'active';
+    freelancers.push(freelancer);
+    saveFreelancers();
+  }
+
+  function updateFreelancer(id, data) {
+    const idx = freelancers.findIndex(f => f.id === id);
+    if(idx !== -1) {
+      freelancers[idx] = { ...freelancers[idx], ...data };
+      saveFreelancers();
+    }
+  }
+
+  function deleteFreelancer(id) { freelancers = freelancers.filter(f => f.id !== id); saveFreelancers(); }
+
+  function addTask(freelancerId, task) {
+    const freelancer = freelancers.find(f => f.id === freelancerId);
+    if(freelancer) {
+      task.id = Date.now().toString();
+      task.createdAt = new Date().toISOString();
+      freelancer.tasks = freelancer.tasks || [];
+      freelancer.tasks.push(task);
+      saveFreelancers();
+    }
+  }
+
+  function addWorkHistory(freelancerId, work) {
+    const freelancer = freelancers.find(f => f.id === freelancerId);
+    if(freelancer) {
+      work.id = Date.now().toString();
+      freelancer.workHistory = freelancer.workHistory || [];
+      freelancer.workHistory.unshift(work);
+      saveFreelancers();
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  function renderAll() { updateStats(); renderFreelancers(); }
+
+  function updateStats() {
+    const total = freelancers.length;
+    const active = freelancers.filter(f => f.status === 'active').length;
+    let ratingSum = 0;
+    let totalProjects = 0;
+    freelancers.forEach(f => {
+      const { avgRating } = calculateScore(f);
+      ratingSum += avgRating;
+      totalProjects += (f.workHistory?.length || 0);
+    });
+    const avgRatingValue = total > 0 ? (ratingSum / total).toFixed(1) : 0;
+    document.getElementById('totalFreelancers').innerText = total;
+    document.getElementById('activeFreelancers').innerText = active;
+    document.getElementById('avgRating').innerText = avgRatingValue;
+    document.getElementById('totalProjects').innerText = totalProjects;
+  }
+
+  function renderFreelancers() {
+    const container = document.getElementById('freelancersContainer');
+    if(freelancers.length === 0) { container.innerHTML = '<div class="empty-state">No freelancers yet. Click "+ Add Freelancer" to get started.</div>'; return; }
+    container.innerHTML = freelancers.map(f => {
+      const { score, avgRating } = calculateScore(f);
+      const skills = f.skills ? f.skills.split(',').map(s => s.trim()) : [];
+      const tasksCount = f.tasks?.length || 0;
+      const pendingTasks = f.tasks?.filter(t => t.status !== 'Done').length || 0;
+      const workCount = f.workHistory?.length || 0;
+      const revisions = f.revisionRequests || 0;
+      return `
+        <div class="freelancer-card">
+          <div class="card-header"><h3>${escapeHtml(f.name) || 'Unnamed'}</h3><div class="score-badge score-${score}">${score}</div></div>
+          <div class="card-body">
+            <div class="info-grid">
+              <div class="info-item"><div class="label">USERNAME</div><div class="value">${escapeHtml(f.username) || '-'}</div></div>
+              <div class="info-item"><div class="label">PHONE</div><div class="value">${escapeHtml(f.phone) || '-'}</div></div>
+              <div class="info-item"><div class="label">EMAIL</div><div class="value">${escapeHtml(f.email) || '-'}</div></div>
+              <div class="info-item"><div class="label">STATUS</div><div class="value">${f.status || 'active'}</div></div>
+            </div>
+            <div class="info-grid">
+              <div class="info-item"><div class="label">SPECIALIZATION</div><div class="value">${escapeHtml(f.specialization) || '-'}</div></div>
+              <div class="info-item"><div class="label">RATE</div><div class="value">${escapeHtml(f.rate) || '-'}</div></div>
+              <div class="info-item"><div class="label">TIMEZONE</div><div class="value">${escapeHtml(f.timezone) || '-'}</div></div>
+              <div class="info-item"><div class="label">SINCE</div><div class="value">${f.createdAt || '-'}</div></div>
+            </div>
+            <div class="skills">${skills.map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}</div>
+            <div class="stats-detail">
+              <div class="stat-detail-card"><div class="stat-detail-number">${avgRating.toFixed(1)}</div><div class="stat-detail-label">⭐ Rating / 5</div></div>
+              <div class="stat-detail-card"><div class="stat-detail-number">${workCount}</div><div class="stat-detail-label">📁 Projects Done</div></div>
+              <div class="stat-detail-card"><div class="stat-detail-number">${revisions}</div><div class="stat-detail-label">🔄 Revisions</div></div>
+              <div class="stat-detail-card"><div class="stat-detail-number">${pendingTasks}</div><div class="stat-detail-label">📋 Pending Tasks</div></div>
+            </div>
+            <div class="work-history"><div class="work-item"><span>📁 Portfolio:</span><span>${f.portfolio ? '<a href="#" style="color:#818cf8">Link</a>' : '-'}</span></div></div>
+            <div class="action-buttons">
+              <div class="btn-tasks" onclick="openTasksModal('${f.id}')">📋 Tasks (${tasksCount})</div>
+              <div class="btn-history" onclick="openHistoryModal('${f.id}')">📜 Work History (${workCount})</div>
+            </div>
+            <div class="action-buttons" style="margin-top:8px">
+              <div class="btn-edit" onclick="openEditFreelancer('${f.id}')">✏️ Edit</div>
+              <div class="btn-delete" onclick="if(confirm('Delete this freelancer?')) deleteFreelancer('${f.id}')">🗑️ Delete</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openAddFreelancerModal() { currentFreelancerId = null; document.getElementById('modalTitle').innerText = 'Add Freelancer'; document.getElementById('modalBody').innerHTML = getFreelancerFormHtml({}); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Freelancer</button></div>`; document.getElementById('freelancerModal').style.display = 'flex'; attachFreelancerModalEvents(true); }
+  
+  function openEditFreelancer(id) { currentFreelancerId = id; const f = freelancers.find(f => f.id === id); document.getElementById('modalTitle').innerText = 'Edit Freelancer'; document.getElementById('modalBody').innerHTML = getFreelancerFormHtml(f); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; document.getElementById('freelancerModal').style.display = 'flex'; attachFreelancerModalEvents(false); }
+
+  function getFreelancerFormHtml(f) {
+    return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+      <div><div class="field-group"><label class="field-label">FULL NAME</label><input class="field-input" id="fName" value="${escapeHtml(f.name || '')}"></div>
+      <div class="field-group"><label class="field-label">USERNAME</label><input class="field-input" id="fUsername" value="${escapeHtml(f.username || '')}"></div>
+      <div class="field-group"><label class="field-label">PHONE</label><input class="field-input" id="fPhone" value="${escapeHtml(f.phone || '')}"></div>
+      <div class="field-group"><label class="field-label">EMAIL</label><input class="field-input" id="fEmail" value="${escapeHtml(f.email || '')}"></div>
+      <div class="field-group"><label class="field-label">SPECIALIZATION</label><input class="field-input" id="fSpecialization" value="${escapeHtml(f.specialization || '')}"></div>
+      <div class="field-group"><label class="field-label">SKILLS (comma separated)</label><input class="field-input" id="fSkills" value="${escapeHtml(f.skills || '')}"></div></div>
+      <div><div class="field-group"><label class="field-label">RATE ($/h or $/project)</label><input class="field-input" id="fRate" value="${escapeHtml(f.rate || '')}"></div>
+      <div class="field-group"><label class="field-label">TIMEZONE</label><input class="field-input" id="fTimezone" value="${escapeHtml(f.timezone || '')}"></div>
+      <div class="field-group"><label class="field-label">PORTFOLIO URL</label><input class="field-input" id="fPortfolio" value="${escapeHtml(f.portfolio || '')}"></div>
+      <div class="field-group"><label class="field-label">STATUS</label><select class="field-select" id="fStatus"><option ${f.status==='active'?'selected':''}>active</option><option ${f.status==='inactive'?'selected':''}>inactive</option></select></div>
+      <div class="field-group"><label class="field-label">REVISION REQUESTS</label><input class="field-input" type="number" id="fRevisions" value="${f.revisionRequests || 0}"></div></div>
+    </div>`;
+  }
+
+  function attachFreelancerModalEvents(isAdd) {
+    document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('freelancerModal').style.display = 'none');
+    document.getElementById('saveModalBtn')?.addEventListener('click', () => {
+      const data = {
+        name: document.getElementById('fName')?.value,
+        username: document.getElementById('fUsername')?.value,
+        phone: document.getElementById('fPhone')?.value,
+        email: document.getElementById('fEmail')?.value,
+        specialization: document.getElementById('fSpecialization')?.value,
+        skills: document.getElementById('fSkills')?.value,
+        rate: document.getElementById('fRate')?.value,
+        timezone: document.getElementById('fTimezone')?.value,
+        portfolio: document.getElementById('fPortfolio')?.value,
+        status: document.getElementById('fStatus')?.value,
+        revisionRequests: parseInt(document.getElementById('fRevisions')?.value) || 0
+      };
+      if(isAdd) addFreelancer(data);
+      else updateFreelancer(currentFreelancerId, data);
+      document.getElementById('freelancerModal').style.display = 'none';
+    });
+  }
+
+  function openTasksModal(freelancerId) {
+    currentTasksFreelancerId = freelancerId;
+    const f = freelancers.find(f => f.id === freelancerId);
+    document.getElementById('tasksTitle').innerText = `Tasks — ${f.name}`;
+    const tasks = f.tasks || [];
+    if(tasks.length === 0) { document.getElementById('tasksBody').innerHTML = '<div class="empty-state">No tasks assigned yet.</div>'; }
+    else {
+      let html = '<table class="tasks-table"><thead><tr><th>TASK NAME</th><th>CLIENT</th><th>DEADLINE</th><th>PRIORITY</th><th>STATUS</th><th>CLIENT PORTAL</th><th>ACTIONS</th></tr></thead><tbody>';
+      tasks.forEach(t => {
+        let statusClass = 'status-todo';
+        if(t.status === 'In Progress') statusClass = 'status-progress';
+        else if(t.status === 'Review') statusClass = 'status-review';
+        else if(t.status === 'Done') statusClass = 'status-done';
+        let priorityClass = '';
+        if(t.priority === 'High') priorityClass = 'priority-high';
+        else if(t.priority === 'Medium') priorityClass = 'priority-medium';
+        else priorityClass = 'priority-low';
+        html += `<tr>
+          <td><strong>${escapeHtml(t.name) || '-'}</strong>${t.description ? `<br><small style="color:#6b7280">${escapeHtml(t.description.substring(0,50))}</small>` : ''}</td>
+          <td>${escapeHtml(t.client) || '-'}</td>
+          <td>${t.deadline || '-'}</td>
+          <td class="${priorityClass}">${t.priority || 'Medium'}</td>
+          <td><span class="task-status ${statusClass}">${t.status || 'To Do'}</span></td>
+          <td class="${t.visibleToClient ? 'visible-yes' : 'visible-no'}">${t.visibleToClient ? '✅ Visible' : '❌ Internal'}</td>
+          <td><button class="btn-cancel" style="padding:4px 8px;font-size:10px" onclick="deleteTask('${freelancerId}','${t.id}')">Delete</button></td>
+        </tr>`;
+      });
+      html += '</tbody><tr>';
+      document.getElementById('tasksBody').innerHTML = html;
+    }
+    document.getElementById('tasksModal').style.display = 'flex';
+  }
+
+  function deleteTask(freelancerId, taskId) {
+    if(confirm('Delete this task?')) {
+      const f = freelancers.find(f => f.id === freelancerId);
+      if(f && f.tasks) { f.tasks = f.tasks.filter(t => t.id !== taskId); saveFreelancers(); openTasksModal(freelancerId); }
+    }
+  }
+
+  function addTaskToFreelancer() {
+    const name = prompt('Task name:');
+    if(!name) return;
+    const client = prompt('Client name:') || '';
+    const deadline = prompt('Deadline (YYYY-MM-DD):') || '';
+    const priority = prompt('Priority (High/Medium/Low):', 'Medium');
+    const visibleToClient = confirm('Visible to client?') ? true : false;
+    const task = {
+      id: Date.now().toString(),
+      name: name,
+      client: client,
+      deadline: deadline,
+      priority: priority,
+      status: 'To Do',
+      visibleToClient: visibleToClient
+    };
+    addTask(currentTasksFreelancerId, task);
+    openTasksModal(currentTasksFreelancerId);
+  }
+
+  function openHistoryModal(freelancerId) {
+    currentHistoryFreelancerId = freelancerId;
+    const f = freelancers.find(f => f.id === freelancerId);
+    document.getElementById('historyTitle').innerText = `Work History — ${f.name}`;
+    const history = f.workHistory || [];
+    if(history.length === 0) { document.getElementById('historyBody').innerHTML = '<div class="empty-state">No work history yet.</div>'; }
+    else {
+      let html = '<table class="tasks-table"><thead><tr><th>PROJECT</th><th>CLIENT</th><th>RATING</th><th>QUALITY</th><th>REVISIONS</th><th>DATE</th></tr></thead><tbody>';
+      history.forEach(h => {
+        html += `<tr>
+          <td><strong>${escapeHtml(h.projectName) || '-'}</strong></td>
+          <td>${escapeHtml(h.client) || '-'}</td>
+          <td>⭐ ${h.rating}/5</td>
+          <td>🎯 ${h.quality}%</td>
+          <td>🔄 ${h.revisions}</td>
+          <td>${h.date || '-'}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('historyBody').innerHTML = html;
+    }
+    document.getElementById('historyModal').style.display = 'flex';
+  }
+
+  function addWorkHistoryToFreelancer() {
+    const projectName = prompt('Project name:');
+    if(!projectName) return;
+    const client = prompt('Client name:') || '';
+    const rating = parseFloat(prompt('Rating (1-5):', '5')) || 5;
+    const quality = parseInt(prompt('Quality %:', '100')) || 100;
+    const revisions = parseInt(prompt('Revision requests:', '0')) || 0;
+    const work = {
+      id: Date.now().toString(),
+      projectName: projectName,
+      client: client,
+      rating: rating,
+      quality: quality,
+      revisions: revisions,
+      date: new Date().toISOString().split('T')[0]
+    };
+    addWorkHistory(currentHistoryFreelancerId, work);
+    openHistoryModal(currentHistoryFreelancerId);
+  }
+
+  function updateDate() { document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+
+  document.getElementById('addFreelancerBtn').onclick = openAddFreelancerModal;
+  document.getElementById('closeModalBtn').onclick = () => document.getElementById('freelancerModal').style.display = 'none';
+  document.getElementById('closeTasksModalBtn').onclick = () => document.getElementById('tasksModal').style.display = 'none';
+  document.getElementById('closeTasksFooterBtn').onclick = () => document.getElementById('tasksModal').style.display = 'none';
+  document.getElementById('addTaskBtn').onclick = addTaskToFreelancer;
+  document.getElementById('closeHistoryBtn').onclick = () => document.getElementById('historyModal').style.display = 'none';
+  document.getElementById('closeHistoryFooterBtn').onclick = () => document.getElementById('historyModal').style.display = 'none';
+  document.getElementById('addHistoryBtn').onclick = addWorkHistoryToFreelancer;
+  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+
+  freelancers = getFreelancers();
+  updateDate();
+  renderAll();
+</script>
+</body>
+</html>
