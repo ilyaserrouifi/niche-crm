@@ -411,6 +411,10 @@
         avatarImage.src = avatarBase64;
         avatarImage.style.display = 'block';
         avatarPlaceholder.style.display = 'none';
+        avatarImage.style.width = '100%';
+        avatarImage.style.height = '100%';
+        avatarImage.style.objectFit = 'cover';
+        avatarImage.style.borderRadius = '50%';
       };
       reader.readAsDataURL(file);
     }
@@ -514,7 +518,8 @@
         if (data.role) localStorage.setItem('niche_role', data.role);
         if (data.name) localStorage.setItem('niche_name', data.name);
         if (data.email) localStorage.setItem('niche_email', data.email);
-        if (data.avatar) localStorage.setItem('niche_avatar', data.avatar);
+        if (data.avatar_url) localStorage.setItem('niche_avatar_url', data.avatar_url);
+        if (data.avatar_initials) localStorage.setItem('niche_avatar_initials', data.avatar_initials);
         
         successMsg.textContent = '✓ Account created successfully! Redirecting to dashboard...';
         successMsg.classList.add('visible');
