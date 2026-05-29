@@ -109,7 +109,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // ============================================================
-// USERS
+// GET USER PROFILE
 // ============================================================
 app.get('/api/users/me', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
@@ -117,13 +117,51 @@ app.get('/api/users/me', async (req, res) => {
     
     try {
         const userId = parseInt(Buffer.from(token, 'base64').toString().split(':')[0]);
-        const result = await pool.query('SELECT id, email, full_name, username, phone, role, avatar_initials, created_at FROM users WHERE id = $1', [userId]);
+        const result = await pool.query('SELECT id, email, full_name, username, phone, role, country, city, address, specialization, bio, avatar_initials, created_at FROM users WHERE id = $1', [userId]);
         
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'User not found' });
         }
         res.json(result.rows[0]);
     } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// ============================================================
+// UPDATE USER PROFILE
+// ============================================================
+app.put('/api/users/me', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    
+    try {
+        const userId = parseInt(Buffer.from(token, 'base64').toString().split(':')[0]);
+        const { full_name, username, phone, country, city, address, specialization, bio } = req.body;
+        
+        const result = await pool.query(
+            `UPDATE users 
+             SET full_name = COALESCE($1, full_name),
+                 username = COALESCE($2, username),
+                 phone = COALESCE($3, phone),
+                 country = COALESCE($4, country),
+                 city = COALESCE($5, city),
+                 address = COALESCE($6, address),
+                 specialization = COALESCE($7, specialization),
+                 bio = COALESCE($8, bio),
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = $9
+             RETURNING id, email, full_name, username, phone, role, country, city, address, specialization, bio`,
+            [full_name, username, phone, country, city, address, specialization, bio, userId]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        res.json(result.rows[0]);
+    } catch (error) {
+        console.error('Update error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
