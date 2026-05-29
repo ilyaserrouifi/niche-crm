@@ -3,172 +3,103 @@ const cors = require('cors');
 const path = require('path');
 const { Pool } = require('pg');
 const multer = require('multer');
+const bcrypt = require('bcrypt');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configure multer for FormData
 const upload = multer();
 
-// Database connection
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Static files
 app.use(express.static(path.join(__dirname, '..')));
 app.use('/page', express.static(path.join(__dirname, '..', 'page')));
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
 
-// ============================================================
-// HEALTH CHECK
-// ============================================================
 app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'API is running', timestamp: new Date().toISOString() });
 });
 
-// ============================================================
-// REGISTER (with multer for FormData)
-// ============================================================
 app.post('/api/auth/register', upload.none(), async (req, res) => {
-    console.log("📥 Données reçues:", req.body);
-    
-    const { full_name, email, username, phone, role, password_hash, avatar_initials } = req.body;
-    
+    const { full_name, email, username, phone, role, password, avatar_initials } = req.body;
     try {
-        // Check if user exists
         const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
         if (existing.rows.length > 0) {
             return res.status(400).json({ success: false, message: 'Email already exists' });
         }
-        
-        // Insert new user
+        const password_hash = await bcrypt.hash(password || 'defaultpass', 10);
         const result = await pool.query(
             `INSERT INTO users (email, password_hash, full_name, username, phone, role, status, avatar_initials) 
              VALUES ($1, $2, $3, $4, $5, $6, 'active', $7) 
              RETURNING id, email, role, full_name`,
             [email, password_hash, full_name, username, phone, role || 'client', avatar_initials || null]
         );
-        
-        // Generate token
         const token = Buffer.from(`${result.rows[0].id}:${Date.now()}`).toString('base64');
-        
-        res.json({
-            success: true,
-            token: token,
-            user: result.rows[0]
-        });
+        res.json({ success: true, token: token, user: result.rows[0] });
     } catch (error) {
         console.error('Registration error:', error);
         res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
 });
 
-// ============================================================
-// LOGIN
-// ============================================================
 app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
-    
-    console.log("📥 Login attempt:", { email });
-    
     try {
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        
         if (result.rows.length === 0) {
-            return res.status(401).json({ message: 'Email ou mot de passe incorrect' });
+            return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
         }
-        
         const user = result.rows[0];
-        
-        if (password === user.password_hash) {
+        const match = await bcrypt.compare(password, user.password_hash);
+        if (match) {
             const token = Buffer.from(`${user.id}:${Date.now()}`).toString('base64');
-            res.json({
-                success: true,
-                token: token,
-                role: user.role,
-                name: user.full_name,
-                id: user.id,
-                email: user.email,
-                avatar_initials: user.avatar_initials
-            });
+            res.json({ success: true, token, role: user.role, name: user.full_name, id: user.id, email: user.email, avatar_initials: user.avatar_initials });
         } else {
-            res.status(401).json({ message: 'Email ou mot de passe incorrect' });
+            res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
         }
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ message: 'Erreur serveur', error: error.message });
+        res.status(500).json({ success: false, message: 'Erreur serveur', error: error.message });
     }
 });
 
-// ============================================================
-// GET USER PROFILE
-// ============================================================
 app.get('/api/users/me', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
     try {
         const userId = parseInt(Buffer.from(token, 'base64').toString().split(':')[0]);
         const result = await pool.query('SELECT id, email, full_name, username, phone, role, country, city, address, specialization, bio, avatar_initials, created_at FROM users WHERE id = $1', [userId]);
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+        if (result.rows.length === 0) return res.status(404).json({ message: 'User not found' });
         res.json(result.rows[0]);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
     }
 });
 
-// ============================================================
-// UPDATE USER PROFILE
-// ============================================================
 app.put('/api/users/me', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
-    
     try {
         const userId = parseInt(Buffer.from(token, 'base64').toString().split(':')[0]);
         const { full_name, username, phone, country, city, address, specialization, bio } = req.body;
-        
         const result = await pool.query(
-            `UPDATE users 
-             SET full_name = COALESCE($1, full_name),
-                 username = COALESCE($2, username),
-                 phone = COALESCE($3, phone),
-                 country = COALESCE($4, country),
-                 city = COALESCE($5, city),
-                 address = COALESCE($6, address),
-                 specialization = COALESCE($7, specialization),
-                 bio = COALESCE($8, bio),
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE id = $9
-             RETURNING id, email, full_name, username, phone, role, country, city, address, specialization, bio`,
+            `UPDATE users SET full_name = COALESCE($1, full_name), username = COALESCE($2, username), phone = COALESCE($3, phone), country = COALESCE($4, country), city = COALESCE($5, city), address = COALESCE($6, address), specialization = COALESCE($7, specialization), bio = COALESCE($8, bio), updated_at = CURRENT_TIMESTAMP WHERE id = $9 RETURNING id, email, full_name, username, phone, role, country, city, address, specialization, bio`,
             [full_name, username, phone, country, city, address, specialization, bio, userId]
         );
-        
-        if (result.rows.length === 0) {
-            return res.status(404).json({ message: 'User not found' });
-        }
-        
+        if (result.rows.length === 0) return res.status(404).json({ message: 'User not found' });
         res.json(result.rows[0]);
     } catch (error) {
-        console.error('Update error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
 
-// ============================================================
-// LEADS
-// ============================================================
 app.get('/api/leads', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM leads ORDER BY created_at DESC');
@@ -178,25 +109,16 @@ app.get('/api/leads', async (req, res) => {
     }
 });
 
-// ============================================================
-// DASHBOARD
-// ============================================================
 app.get('/api/dashboard', async (req, res) => {
     try {
         const pipelineTotal = await pool.query("SELECT COALESCE(SUM(estimated_value), 0) FROM leads WHERE stage NOT IN ('CLOSED_WON', 'CLOSED_LOST')");
         const mrr = await pool.query("SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE status = 'paid' AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)");
         const expenses = await pool.query("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE EXTRACT(MONTH FROM expense_date) = EXTRACT(MONTH FROM CURRENT_DATE)");
-        
         res.json({
-            todayCalls: 0,
-            todayMeetings: 0,
-            todayDeals: 0,
-            todayRevenue: 0,
+            todayCalls: 0, todayMeetings: 0, todayDeals: 0, todayRevenue: 0,
             pipelineTotal: parseFloat(pipelineTotal.rows[0].coalesce) || 0,
-            pipelineMonth: 0,
-            pipelineAtRisk: 0,
-            topPerformer: '—',
-            needsAttention: '—',
+            pipelineMonth: 0, pipelineAtRisk: 0,
+            topPerformer: '—', needsAttention: '—',
             mrr: parseFloat(mrr.rows[0].coalesce) || 0,
             expenses: parseFloat(expenses.rows[0].coalesce) || 0,
             netProfit: (parseFloat(mrr.rows[0].coalesce) || 0) - (parseFloat(expenses.rows[0].coalesce) || 0)
@@ -206,33 +128,20 @@ app.get('/api/dashboard', async (req, res) => {
     }
 });
 
-// ============================================================
-// CLIENTS
-// ============================================================
 app.get('/api/clients', async (req, res) => {
     try {
         const result = await pool.query("SELECT * FROM users WHERE role = 'client' ORDER BY created_at DESC");
         res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    } catch (error) { res.status(500).json({ message: error.message }); }
 });
 
-// ============================================================
-// PROJECTS
-// ============================================================
 app.get('/api/projects', async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM projects ORDER BY created_at DESC');
         res.json(result.rows);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    } catch (error) { res.status(500).json({ message: error.message }); }
 });
 
-// ============================================================
-// ANALYTICS
-// ============================================================
 app.get('/api/analytics/leaderboard', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -245,9 +154,7 @@ app.get('/api/analytics/leaderboard', async (req, res) => {
             ORDER BY revenue DESC LIMIT 10
         `);
         res.json(result.rows);
-    } catch (error) {
-        res.json([]);
-    }
+    } catch (error) { res.json([]); }
 });
 
 app.get('/api/analytics/conversion-funnel', async (req, res) => {
@@ -256,55 +163,32 @@ app.get('/api/analytics/conversion-funnel', async (req, res) => {
         const result = [];
         for (const stage of stages) {
             const count = await pool.query('SELECT COUNT(*) FROM leads WHERE stage = $1', [stage]);
-            result.push({ stage: stage, count: parseInt(count.rows[0].count) });
+            result.push({ stage, count: parseInt(count.rows[0].count) });
         }
         res.json(result);
-    } catch (error) {
-        res.json([]);
-    }
+    } catch (error) { res.json([]); }
 });
 
-// ============================================================
-// FINANCE
-// ============================================================
 app.get('/api/finance/invoices', async (req, res) => {
-    try { 
-        const r = await pool.query('SELECT * FROM invoices ORDER BY created_at DESC'); 
-        res.json(r.rows); 
-    } catch(e) { res.json([]); }
+    try { const r = await pool.query('SELECT * FROM invoices ORDER BY created_at DESC'); res.json(r.rows); } catch(e) { res.json([]); }
 });
 
 app.get('/api/finance/expenses', async (req, res) => {
-    try { 
-        const r = await pool.query('SELECT * FROM expenses ORDER BY expense_date DESC'); 
-        res.json(r.rows); 
-    } catch(e) { res.json([]); }
+    try { const r = await pool.query('SELECT * FROM expenses ORDER BY expense_date DESC'); res.json(r.rows); } catch(e) { res.json([]); }
 });
 
 app.get('/api/cold-callers', async (req, res) => {
-    try { 
-        const r = await pool.query("SELECT * FROM users WHERE role = 'caller'"); 
-        res.json(r.rows); 
-    } catch(e) { res.json([]); }
+    try { const r = await pool.query("SELECT * FROM users WHERE role = 'caller'"); res.json(r.rows); } catch(e) { res.json([]); }
 });
 
 app.get('/api/outreachers', async (req, res) => {
-    try { 
-        const r = await pool.query("SELECT * FROM users WHERE role = 'outreacher'"); 
-        res.json(r.rows); 
-    } catch(e) { res.json([]); }
+    try { const r = await pool.query("SELECT * FROM users WHERE role = 'outreacher'"); res.json(r.rows); } catch(e) { res.json([]); }
 });
 
 app.get('/api/freelancers', async (req, res) => {
-    try { 
-        const r = await pool.query("SELECT * FROM users WHERE role = 'freelancer'"); 
-        res.json(r.rows); 
-    } catch(e) { res.json([]); }
+    try { const r = await pool.query("SELECT * FROM users WHERE role = 'freelancer'"); res.json(r.rows); } catch(e) { res.json([]); }
 });
 
-// ============================================================
-// START SERVER
-// ============================================================
 if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
         console.log(`🚀 Server running on http://localhost:${PORT}`);
