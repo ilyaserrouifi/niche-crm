@@ -20,32 +20,12 @@
   ],
   "routes": [
     {
-      "src": "/api/health",
+      "src": "/api/(.*)",
       "dest": "/backend/server.js"
     },
     {
-      "src": "/api/auth/(.*)",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/api/users/(.*)",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/api/pipeline/(.*)",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/api/tasks/(.*)",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/api/finance/(.*)",
-      "dest": "/backend/server.js"
-    },
-    {
-      "src": "/api/analytics/(.*)",
-      "dest": "/backend/server.js"
+      "src": "/",
+      "dest": "/login.html"
     },
     {
       "src": "/register.html",
