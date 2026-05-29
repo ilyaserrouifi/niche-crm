@@ -16,10 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '..')));
 app.use('/page', express.static(path.join(__dirname, '..', 'page')));
 app.use('/pages', express.static(path.join(__dirname, '..', 'page')));
-
-// ⬇️⬇️⬇️ هاد السطر الجديد باش تخدم الصور من مجلد assets ⬇️⬇️⬇️
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
-// ⬆️⬆️⬆️ ⬆️⬆️⬆️
 
 // ============================================================
 // ROUTES API
@@ -32,28 +29,33 @@ app.use('/api/finance', require('./routes/finance'));
 app.use('/api/analytics', require('./routes/analytics'));
 
 // ============================================================
+// HEALTH CHECK (pour Vercel)
+// ============================================================
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', message: 'API is running', timestamp: new Date().toISOString() });
+});
+
+// ============================================================
 // API - REGISTRATION (INSCRIPTION)
 // ============================================================
 app.post('/api/auth/register', async (req, res) => {
     const { full_name, email, username, phone, role, password_hash } = req.body;
     try {
-        // Vérifier si l'email existe déjà
         const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
         if (existing.rows.length > 0) {
             return res.status(400).json({ success: false, message: 'Email already exists' });
         }
         
-        // Insérer le nouvel utilisateur
         const result = await pool.query(
             `INSERT INTO users (email, password_hash, full_name, username, phone, role, status) 
              VALUES ($1, $2, $3, $4, $5, $6, 'active') RETURNING id, email, role`,
-            [email, password_hash, full_name, username, phone, role]
+            [email, password_hash, full_name, username, phone, role || 'client']
         );
         
         res.json({ success: true, user: result.rows[0] });
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        res.status(500).json({ success: false, message: 'Server error', error: error.message });
     }
 });
 
@@ -83,7 +85,7 @@ app.post('/api/auth/login', async (req, res) => {
         }
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ message: 'Erreur serveur' });
+        res.status(500).json({ message: 'Erreur serveur', error: error.message });
     }
 });
 
@@ -122,12 +124,11 @@ app.get('/api/dashboard', async (req, res) => {
 });
 
 // ============================================================
-// API - REQUEST ACCESS (DEMANDE D'ACCÈS)
+// API - REQUEST ACCESS
 // ============================================================
 app.post('/api/auth/request-access', async (req, res) => {
     const { name, email, company, role, message } = req.body;
     try {
-        // Ici tu peux envoyer un email ou stocker dans une table "access_requests"
         console.log('Demande d\'accès reçue:', { name, email, company, role, message });
         res.json({ success: true, message: 'Request sent successfully' });
     } catch (error) {
@@ -250,10 +251,11 @@ app.get('/api/export/:type', async (req, res) => {
 });
 
 // ============================================================
-// DÉMARRAGE DU SERVEUR
+// DÉMARRAGE DU SERVEUR (pour local)
 // ============================================================
-app.listen(PORT, () => {
-    console.log(`
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`
 ╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
 ║   🚀 NICHE CRM API - SERVEUR DÉMARRÉ                    ║
@@ -265,5 +267,11 @@ app.listen(PORT, () => {
 ║   🔌 API Ready: /api/*                                   ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝
-    `);
-});
+        `);
+    });
+}
+
+// ============================================================
+// POUR VERCEL (SERVERLESS)
+// ============================================================
+module.exports = app;
