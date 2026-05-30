@@ -1426,3 +1426,36 @@ console.log('   - Reports Export: /api/reports/export/*');
 console.log('   - Time Tracking: /api/time-tracking/*');
 console.log('   - Notifications: /api/notifications/*');
 console.log('   - Automation: /api/automation/*');
+const http = require('http');
+const socketIo = require('socket.io');
+
+const server = http.createServer(app);
+const io = socketIo(server, {
+    cors: { origin: "*" }
+});
+
+// WebSocket events
+io.on('connection', (socket) => {
+    console.log('🟢 Client connected:', socket.id);
+    
+    socket.on('join-project', (projectId) => {
+        socket.join(`project-${projectId}`);
+    });
+    
+    socket.on('task-update', (data) => {
+        io.to(`project-${data.projectId}`).emit('task-changed', data);
+    });
+    
+    socket.on('new-message', (data) => {
+        io.to(`project-${data.projectId}`).emit('message-received', data);
+    });
+    
+    socket.on('disconnect', () => {
+        console.log('🔴 Client disconnected');
+    });
+});
+
+// Remplacer app.listen par server.listen
+server.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+});
