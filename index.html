@@ -366,19 +366,30 @@
     </div>
     <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
   </div>
+  
   <div class="nav-section">MAIN</div>
   <a href="/index.html" class="nav-item active"><i>📊</i> <span>Dashboard</span></a>
   <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Pipeline</span></a>
+  
   <div class="nav-section">PEOPLE</div>
   <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
   <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
   <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
   <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  
   <div class="nav-section">WORK</div>
   <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
   <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
   <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
   <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  
+  <!-- 🆕 NOUVEAUX LIENS POUR LES NOUVELLES PAGES -->
+  <div class="nav-section">PORTAL</div>
+  <a href="/page/client-portal.html" class="nav-item"><i>🏢</i> <span>Client Portal</span></a>
+  <a href="/page/kanban.html" class="nav-item"><i>🎯</i> <span>Kanban</span></a>
+  <a href="/page/gantt.html" class="nav-item"><i>📊</i> <span>Gantt</span></a>
+  <a href="/page/talent-marketplace.html" class="nav-item"><i>🌟</i> <span>Talent</span></a>
+  
   <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
 </div>
 
@@ -457,13 +468,11 @@
     
     const avatarElement = document.getElementById('profileAvatar');
     
-    // If avatar URL exists, show image
     if (avatarUrl && avatarUrl !== 'null' && avatarUrl !== '') {
       avatarElement.style.background = 'none';
       avatarElement.style.overflow = 'hidden';
       avatarElement.innerHTML = `<img src="${avatarUrl}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;">`;
     } else {
-      // Show initials
       avatarElement.style.background = 'linear-gradient(135deg, var(--blue-primary), #7c3aed)';
       avatarElement.innerHTML = avatarInitials;
     }
