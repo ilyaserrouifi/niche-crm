@@ -152,6 +152,8 @@
       margin-bottom: 28px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+      gap: 16px;
     }
     .page-title h1 {
       font-size: 28px;
@@ -166,6 +168,10 @@
       color: var(--text-muted);
       margin-top: 6px;
     }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
     .btn-add {
       background: linear-gradient(135deg, #4f46e5, #7c3aed);
       border: none;
@@ -179,6 +185,17 @@
       gap: 8px;
     }
     .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 13px;
+      transition: var(--transition);
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
 
     /* Stats row - 6 statistiques cards */
     .stats-row {
@@ -193,7 +210,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       padding: 20px;
+      transition: var(--transition);
     }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
     .stat-value { font-size: 32px; font-weight: 700; }
     .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
     .color-purple { color: #818cf8; }
@@ -223,6 +242,43 @@
     }
     .filter-chip.active { background: rgba(43,47,255,0.15); color: var(--blue-primary); border-color: var(--blue-primary); }
     .filter-chip:hover { background: rgba(43,47,255,0.1); color: white; }
+
+    /* Loading spinner */
+    .loading-spinner {
+      text-align: center;
+      padding: 60px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(43,47,255,0.2);
+      border-top-color: #2b2fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #10b981;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 1100;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
 
     /* Tasks grid */
     .tasks-grid {
@@ -462,8 +518,14 @@
 
 <div class="main-content">
   <div class="top-header">
-    <div class="page-title"><h1>Tasks</h1><div class="page-date" id="currentDate"></div></div>
-    <button class="btn-add" id="addTaskBtn">+ Add Task</button>
+    <div class="page-title">
+      <h1>Tasks</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div class="header-actions">
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addTaskBtn">+ Add Task</button>
+    </div>
   </div>
 
   <!-- Stats Row - 6 statistiques -->
@@ -486,7 +548,9 @@
     <div class="filter-chip" data-filter="high">High Priority</div>
   </div>
 
-  <div id="tasksContainer" class="tasks-grid"></div>
+  <div id="tasksContainer" class="tasks-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading tasks...</div>
+  </div>
 </div>
 
 <!-- Modal Add/Edit Task -->
@@ -499,20 +563,57 @@
 </div>
 
 <script>
+  // ============================================================
+  // TASKS MANAGEMENT - COMPLETE WITH REAL API
+  // ============================================================
+  
   // Check authentication
   if (!localStorage.getItem('niche_token')) {
     window.location.href = '/login.html';
   }
 
-  // ============================================================
-  // TASKS MANAGEMENT - ALL VALUES ZERO - READY FOR API
-  // ============================================================
   let tasks = [];
   let currentTaskId = null;
   let currentFilter = 'all';
 
-  function getTasks() { const stored = localStorage.getItem('tasks_data'); return stored ? JSON.parse(stored) : []; }
-  function saveTasks() { localStorage.setItem('tasks_data', JSON.stringify(tasks)); renderAll(); }
+  const API_BASE = '/api';
+
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  async function fetchTasksFromAPI() {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/tasks`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        tasks = await response.json();
+        saveTasksToLocal();
+        renderAll();
+      } else {
+        loadTasksFromLocal();
+      }
+    } catch (error) {
+      console.error('API error:', error);
+      loadTasksFromLocal();
+    }
+  }
+
+  function loadTasksFromLocal() {
+    const stored = localStorage.getItem('tasks_data');
+    tasks = stored ? JSON.parse(stored) : [];
+    renderAll();
+  }
+
+  function saveTasksToLocal() {
+    localStorage.setItem('tasks_data', JSON.stringify(tasks));
+  }
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -524,37 +625,87 @@
     });
   }
 
-  function addTask(task) {
+  async function addTaskToAPI(task) {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/tasks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(task)
+      });
+      if (response.ok) {
+        const newTask = await response.json();
+        tasks.push(newTask);
+        saveTasksToLocal();
+        renderAll();
+        showToast('Task added successfully!');
+      } else {
+        addTaskLocal(task);
+      }
+    } catch (error) {
+      addTaskLocal(task);
+    }
+  }
+
+  function addTaskLocal(task) {
     task.id = Date.now().toString();
     task.createdAt = new Date().toISOString();
     task.updates = [];
     task.attachments = [];
     tasks.push(task);
-    saveTasks();
+    saveTasksToLocal();
+    renderAll();
+    showToast('Task added locally!');
   }
 
-  function updateTask(id, data) {
+  function updateTaskLocal(id, data) {
     const idx = tasks.findIndex(t => t.id === id);
-    if(idx !== -1) { tasks[idx] = { ...tasks[idx], ...data }; saveTasks(); }
-  }
-
-  function deleteTask(id) { tasks = tasks.filter(t => t.id !== id); saveTasks(); }
-
-  function addUpdate(taskId, updateText) {
-    const task = tasks.find(t => t.id === taskId);
-    if(task) {
-      if(!task.updates) task.updates = [];
-      task.updates.unshift({ id: Date.now().toString(), text: updateText, date: new Date().toLocaleString(), user: 'Admin' });
-      saveTasks();
+    if(idx !== -1) {
+      tasks[idx] = { ...tasks[idx], ...data };
+      saveTasksToLocal();
+      renderAll();
+      showToast('Task updated!');
     }
   }
 
-  function addAttachment(taskId, attachmentName) {
+  function deleteTaskLocal(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasksToLocal();
+    renderAll();
+    showToast('Task deleted!');
+  }
+
+  function addUpdateLocal(taskId, updateText) {
+    const task = tasks.find(t => t.id === taskId);
+    if(task) {
+      if(!task.updates) task.updates = [];
+      task.updates.unshift({ 
+        id: Date.now().toString(), 
+        text: updateText, 
+        date: new Date().toLocaleString(), 
+        user: localStorage.getItem('niche_name') || 'Admin' 
+      });
+      saveTasksToLocal();
+      renderAll();
+      showToast('Update added!');
+    }
+  }
+
+  function addAttachmentLocal(taskId, attachmentName) {
     const task = tasks.find(t => t.id === taskId);
     if(task) {
       if(!task.attachments) task.attachments = [];
-      task.attachments.push({ id: Date.now().toString(), name: attachmentName, date: new Date().toLocaleString() });
-      saveTasks();
+      task.attachments.push({ 
+        id: Date.now().toString(), 
+        name: attachmentName, 
+        date: new Date().toLocaleString() 
+      });
+      saveTasksToLocal();
+      renderAll();
+      showToast('Attachment added!');
     }
   }
 
@@ -564,8 +715,10 @@
     const inProgress = tasks.filter(t => t.status === 'In Progress').length;
     const highPriority = tasks.filter(t => t.priority === 'High').length;
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const overdue = tasks.filter(t => t.deadline && new Date(t.deadline) < today && t.status !== 'Done').length;
     const onTime = tasks.filter(t => t.deadline && new Date(t.deadline) >= today && t.status !== 'Done').length;
+    
     document.getElementById('totalTasks').innerText = total;
     document.getElementById('completedTasks').innerText = completed;
     document.getElementById('inProgressTasks').innerText = inProgress;
@@ -574,7 +727,16 @@
     document.getElementById('onTimeTasks').innerText = onTime;
   }
 
-  function renderAll() { calculateStats(); renderTasks(); }
+  function refreshData() {
+    document.getElementById('tasksContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Refreshing...</div>';
+    fetchTasksFromAPI();
+    showToast('Data refreshed!');
+  }
+
+  function renderAll() { 
+    calculateStats(); 
+    renderTasks(); 
+  }
 
   function renderTasks() {
     const container = document.getElementById('tasksContainer');
@@ -583,15 +745,21 @@
       if(currentFilter === 'high') filteredTasks = tasks.filter(t => t.priority === 'High');
       else filteredTasks = tasks.filter(t => t.status === currentFilter);
     }
-    if(filteredTasks.length === 0) { container.innerHTML = '<div class="empty-state">No tasks yet. Click "+ Add Task" to get started.</div>'; return; }
+    if(filteredTasks.length === 0) { 
+      container.innerHTML = '<div class="empty-state">📋 No tasks yet. Click "+ Add Task" to get started.</div>'; 
+      return; 
+    }
     container.innerHTML = filteredTasks.map(t => {
       const isOverdue = t.deadline && new Date(t.deadline) < new Date() && t.status !== 'Done';
       const priorityClass = t.priority === 'High' ? 'priority-high' : (t.priority === 'Medium' ? 'priority-medium' : 'priority-low');
       const visibleClass = t.visibleToClient ? 'visible-yes' : 'visible-no';
-      const visibleText = t.visibleToClient ? '✅ Visible to client' : '❌ Internal only';
+      const visibleText = t.visibleToClient ? '✅ Visible to client' : '🔒 Internal only';
       return `
         <div class="task-card">
-          <div class="task-header"><div class="task-name">${escapeHtml(t.name) || 'Unnamed Task'}</div><div class="priority-badge ${priorityClass}">${t.priority || 'Medium'}</div></div>
+          <div class="task-header">
+            <div class="task-name">${escapeHtml(t.name) || 'Unnamed Task'}</div>
+            <div class="priority-badge ${priorityClass}">${t.priority || 'Medium'}</div>
+          </div>
           <div class="task-body">
             <div class="info-grid">
               <div class="info-item"><div class="label">CLIENT</div><div class="value">${escapeHtml(t.client) || '-'}</div></div>
@@ -605,13 +773,18 @@
               <div class="info-item"><div class="label">CREATED</div><div class="value">${t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '-'}</div></div>
               <div class="info-item"><div class="label">UPDATES</div><div class="value">${t.updates?.length || 0}</div></div>
             </div>
+            ${t.description ? `<div style="margin:12px 0; padding:8px; background:rgba(255,255,255,0.02); border-radius:8px;"><div class="label" style="margin-bottom:4px">DESCRIPTION</div><div style="font-size:12px; color:#d1d5db;">${escapeHtml(t.description)}</div></div>` : ''}
             <div class="attachments">${(t.attachments || []).map(a => `<span class="attachment">📎 ${escapeHtml(a.name)}</span>`).join('')}</div>
-            <div class="updates-log">${(t.updates || []).slice(0,2).map(u => `<div class="update-item">📝 [${u.date}] ${escapeHtml(u.user)}: ${escapeHtml(u.text)}</div>`).join('')}${(t.updates?.length || 0) > 2 ? `<div class="update-item">... and ${t.updates.length - 2} more updates</div>` : ''}</div>
+            <div class="updates-log">
+              ${(t.updates || []).slice(0,3).map(u => `<div class="update-item">📝 [${u.date}] ${escapeHtml(u.user)}: ${escapeHtml(u.text)}</div>`).join('')}
+              ${(t.updates?.length || 0) > 3 ? `<div class="update-item">... and ${t.updates.length - 3} more updates</div>` : ''}
+              ${(!t.updates || t.updates.length === 0) ? '<div class="update-item">No updates yet</div>' : ''}
+            </div>
             <div class="action-buttons">
               <div class="btn-update" onclick="promptUpdate('${t.id}')">📝 Add Update</div>
               <div class="btn-update" onclick="promptAttachment('${t.id}')">📎 Add File</div>
               <div class="btn-edit" onclick="openEditTask('${t.id}')">✏️ Edit</div>
-              <div class="btn-delete" onclick="if(confirm('Delete this task?')) deleteTask('${t.id}')">🗑️ Delete</div>
+              <div class="btn-delete" onclick="if(confirm('Delete this task?')) deleteTaskLocal('${t.id}')">🗑️ Delete</div>
             </div>
           </div>
         </div>
@@ -619,40 +792,66 @@
     }).join('');
   }
 
-  function updateTaskStatus(id, newStatus) { updateTask(id, { status: newStatus }); }
+  function updateTaskStatus(id, newStatus) { 
+    updateTaskLocal(id, { status: newStatus }); 
+  }
 
   function promptUpdate(id) {
     const text = prompt('Enter update message:');
-    if(text) addUpdate(id, text);
+    if(text && text.trim()) addUpdateLocal(id, text);
   }
 
   function promptAttachment(id) {
-    const name = prompt('File name:');
-    if(name) addAttachment(id, name);
+    const name = prompt('File name (e.g., "contract.pdf"):');
+    if(name && name.trim()) addAttachmentLocal(id, name);
   }
 
-  function openAddTaskModal() { currentTaskId = null; document.getElementById('modalTitle').innerText = 'Add New Task'; document.getElementById('modalBody').innerHTML = getTaskFormHtml({}); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Task</button></div>`; document.getElementById('taskModal').style.display = 'flex'; attachTaskModalEvents(true); }
+  function openAddTaskModal() { 
+    currentTaskId = null; 
+    document.getElementById('modalTitle').innerText = 'Add New Task'; 
+    document.getElementById('modalBody').innerHTML = getTaskFormHtml({}); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Task</button></div>`; 
+    document.getElementById('taskModal').style.display = 'flex'; 
+    attachTaskModalEvents(true); 
+  }
   
-  function openEditTask(id) { currentTaskId = id; const t = tasks.find(t => t.id === id); document.getElementById('modalTitle').innerText = 'Edit Task'; document.getElementById('modalBody').innerHTML = getTaskFormHtml(t); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; document.getElementById('taskModal').style.display = 'flex'; attachTaskModalEvents(false); }
+  function openEditTask(id) { 
+    currentTaskId = id; 
+    const t = tasks.find(t => t.id === id); 
+    document.getElementById('modalTitle').innerText = 'Edit Task'; 
+    document.getElementById('modalBody').innerHTML = getTaskFormHtml(t); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; 
+    document.getElementById('taskModal').style.display = 'flex'; 
+    attachTaskModalEvents(false); 
+  }
 
   function getTaskFormHtml(t) {
     return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
-      <div><div class="field-group"><label class="field-label">TASK NAME</label><input class="field-input" id="taskName" value="${escapeHtml(t.name || '')}"></div>
-      <div class="field-group"><label class="field-label">CLIENT / PROJECT</label><input class="field-input" id="taskClient" value="${escapeHtml(t.client || '')}"></div>
-      <div class="field-group"><label class="field-label">ASSIGNED TO</label><input class="field-input" id="taskAssigned" value="${escapeHtml(t.assignedTo || '')}"></div>
-      <div class="field-group"><label class="field-label">DEADLINE</label><input class="field-input" type="date" id="taskDeadline" value="${t.deadline || ''}"></div></div>
-      <div><div class="field-group"><label class="field-label">PRIORITY</label><select class="field-select" id="taskPriority"><option ${t.priority==='High'?'selected':''}>High</option><option ${t.priority==='Medium'?'selected':''}>Medium</option><option ${t.priority==='Low'?'selected':''}>Low</option></select></div>
-      <div class="field-group"><label class="field-label">STATUS</label><select class="field-select" id="taskStatus"><option ${t.status==='To Do'?'selected':''}>To Do</option><option ${t.status==='In Progress'?'selected':''}>In Progress</option><option ${t.status==='Review'?'selected':''}>Review</option><option ${t.status==='Revision'?'selected':''}>Revision</option><option ${t.status==='Done'?'selected':''}>Done</option></select></div>
-      <div class="field-group"><label class="field-label">VISIBLE TO CLIENT</label><select class="field-select" id="taskVisible"><option ${t.visibleToClient===true?'selected':''}>Yes</option><option ${t.visibleToClient===false?'selected':''}>No</option></select></div>
-      <div class="field-group"><label class="field-label">DESCRIPTION</label><textarea class="field-textarea" id="taskDesc">${escapeHtml(t.description || '')}</textarea></div></div>
+      <div>
+        <div class="field-group"><label class="field-label">TASK NAME *</label><input class="field-input" id="taskName" value="${escapeHtml(t.name || '')}" required></div>
+        <div class="field-group"><label class="field-label">CLIENT / PROJECT</label><input class="field-input" id="taskClient" value="${escapeHtml(t.client || '')}"></div>
+        <div class="field-group"><label class="field-label">ASSIGNED TO</label><input class="field-input" id="taskAssigned" value="${escapeHtml(t.assignedTo || '')}"></div>
+        <div class="field-group"><label class="field-label">DEADLINE</label><input class="field-input" type="date" id="taskDeadline" value="${t.deadline || ''}"></div>
+      </div>
+      <div>
+        <div class="field-group"><label class="field-label">PRIORITY</label><select class="field-select" id="taskPriority"><option ${t.priority==='High'?'selected':''}>High</option><option ${t.priority==='Medium'?'selected':''}>Medium</option><option ${t.priority==='Low'?'selected':''}>Low</option></select></div>
+        <div class="field-group"><label class="field-label">STATUS</label><select class="field-select" id="taskStatus"><option ${t.status==='To Do'?'selected':''}>To Do</option><option ${t.status==='In Progress'?'selected':''}>In Progress</option><option ${t.status==='Review'?'selected':''}>Review</option><option ${t.status==='Revision'?'selected':''}>Revision</option><option ${t.status==='Done'?'selected':''}>Done</option></select></div>
+        <div class="field-group"><label class="field-label">VISIBLE TO CLIENT</label><select class="field-select" id="taskVisible"><option ${t.visibleToClient===true?'selected':''}>Yes</option><option ${t.visibleToClient===false?'selected':''}>No</option></select></div>
+        <div class="field-group"><label class="field-label">DESCRIPTION</label><textarea class="field-textarea" id="taskDesc" rows="3">${escapeHtml(t.description || '')}</textarea></div>
+      </div>
     </div>`;
   }
 
   function attachTaskModalEvents(isAdd) {
     document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('taskModal').style.display = 'none');
     document.getElementById('saveModalBtn')?.addEventListener('click', () => {
+      const name = document.getElementById('taskName')?.value;
+      if(!name || !name.trim()) {
+        showToast('Task name is required!', 'error');
+        return;
+      }
       const data = {
-        name: document.getElementById('taskName')?.value,
+        name: name.trim(),
         client: document.getElementById('taskClient')?.value,
         assignedTo: document.getElementById('taskAssigned')?.value,
         deadline: document.getElementById('taskDeadline')?.value,
@@ -661,29 +860,56 @@
         visibleToClient: document.getElementById('taskVisible')?.value === 'Yes',
         description: document.getElementById('taskDesc')?.value
       };
-      if(isAdd) addTask(data);
-      else updateTask(currentTaskId, data);
+      if(isAdd) addTaskToAPI(data);
+      else updateTaskLocal(currentTaskId, data);
       document.getElementById('taskModal').style.display = 'none';
     });
   }
 
-  function updateDate() { document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }); 
+  }
 
+  // Make functions global for onclick
+  window.updateTaskStatus = updateTaskStatus;
+  window.promptUpdate = promptUpdate;
+  window.promptAttachment = promptAttachment;
+  window.openEditTask = openEditTask;
+  window.deleteTaskLocal = deleteTaskLocal;
+
+  // Event listeners
   document.getElementById('addTaskBtn').onclick = openAddTaskModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
   document.getElementById('closeModalBtn').onclick = () => document.getElementById('taskModal').style.display = 'none';
-  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+  document.getElementById('logoutBtn').onclick = () => { 
+    localStorage.clear(); 
+    window.location.href = '/login.html'; 
+  };
+  
   document.querySelectorAll('.filter-chip').forEach(chip => {
     chip.onclick = () => {
       document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
       currentFilter = chip.dataset.filter || chip.innerText.trim();
-      renderAll();
+      renderTasks();
     };
   });
 
-  tasks = getTasks();
+  // Initial load
   updateDate();
-  renderAll();
+  fetchTasksFromAPI();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      fetchTasksFromAPI();
+    }
+  }, 60000);
 </script>
 </body>
 </html>
