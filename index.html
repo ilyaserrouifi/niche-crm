@@ -75,6 +75,19 @@
       z-index: 100;
       display: flex;
       flex-direction: column;
+      overflow-y: auto;  /* ← AJOUTÉ: permet le scroll */
+    }
+    
+    /* Custom scrollbar */
+    .sidebar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .sidebar::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .sidebar::-webkit-scrollbar-thumb {
+      background: var(--blue-primary);
+      border-radius: 4px;
     }
 
     .sidebar-brand {
@@ -89,6 +102,17 @@
     }
     .brand-name { font-size: 18px; font-weight: 700; color: white; }
     .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+    /* ✅ STICKY NAV - MAIN section reste visible */
+    .sticky-nav {
+      position: sticky;
+      top: 0;
+      background: rgba(13, 16, 23, 0.98);
+      z-index: 10;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
 
     .nav-section {
       color: #374151;
@@ -427,51 +451,43 @@
     </div>
     <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
   </div>
-  
-  <!-- ============================================================ -->
-  <!-- MAIN SECTION -->
-  <!-- ============================================================ -->
-  <div class="nav-section">MAIN</div>
-  <a href="/index.html" class="nav-item active"><i>📊</i> <span>Dashboard</span></a>
-  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Sales Pipeline</span></a>
-  <a href="/page/kanban.html" class="nav-item"><i>🎯</i> <span>Kanban Board</span></a>
-  <a href="/page/gantt.html" class="nav-item"><i>📅</i> <span>Gantt Chart</span></a>
-  
-  <!-- ============================================================ -->
-  <!-- PEOPLE SECTION -->
-  <!-- ============================================================ -->
+
+  <!-- ✅ MAIN SECTION - STICKY (reste visible) -->
+  <div class="sticky-nav">
+    <div class="nav-section">MAIN</div>
+    <a href="/index.html" class="nav-item active"><i>📊</i> <span>Dashboard</span></a>
+    <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Sales Pipeline</span></a>
+    <a href="/page/kanban.html" class="nav-item"><i>🎯</i> <span>Kanban Board</span></a>
+    <a href="/page/gantt.html" class="nav-item"><i>📅</i> <span>Gantt Chart</span></a>
+  </div>
+
+  <!-- 🔽 PEOPLE SECTION - SCROLLABLE -->
   <div class="nav-section">PEOPLE</div>
   <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
   <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
   <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
   <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
   <a href="/page/staffing.html" class="nav-item"><i>🌟</i> <span>Talent Marketplace</span></a>
-  
-  <!-- ============================================================ -->
-  <!-- WORK SECTION -->
-  <!-- ============================================================ -->
+
+  <!-- 🔽 WORK SECTION - SCROLLABLE -->
   <div class="nav-section">WORK</div>
   <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
   <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
   <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
   <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
   <a href="/page/reports.html" class="nav-item"><i>📋</i> <span>Reports</span></a>
-  
-  <!-- ============================================================ -->
-  <!-- PORTAL SECTION -->
-  <!-- ============================================================ -->
+
+  <!-- 🔽 PORTAL SECTION - SCROLLABLE -->
   <div class="nav-section">PORTAL</div>
   <a href="/page/client-portal.html" class="nav-item"><i>🏢</i> <span>Client Portal</span></a>
   <a href="/page/call-recording.html" class="nav-item"><i>🎙️</i> <span>Call Recording</span></a>
   <a href="/page/screen-monitor.html" class="nav-item"><i>🖥️</i> <span>Screen Monitor</span></a>
-  
-  <!-- ============================================================ -->
-  <!-- SYSTEM SECTION -->
-  <!-- ============================================================ -->
+
+  <!-- 🔽 SYSTEM SECTION - SCROLLABLE -->
   <div class="nav-section">SYSTEM</div>
   <a href="/profile.html" class="nav-item"><i>👤</i> <span>My Profile</span></a>
   <a href="/settings.html" class="nav-item"><i>⚙️</i> <span>Settings</span></a>
-  
+
   <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
 </div>
 

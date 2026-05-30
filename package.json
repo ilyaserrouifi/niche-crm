@@ -30,6 +30,7 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
+    "@twilio/voice-sdk": "^2.18.3",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -44,8 +45,11 @@
     "node-cron": "^4.2.1",
     "pdfkit": "^0.18.0",
     "pg": "^8.11.3",
+    "pusher": "^5.3.3",
     "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "sortablejs": "^1.15.7",
+    "stripe": "^22.2.0",
     "twilio": "^6.0.2"
   },
   "devDependencies": {
