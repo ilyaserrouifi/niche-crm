@@ -351,6 +351,225 @@ app.get('/api/freelancers', async (req, res) => {
 });
 
 // ============================================================
+// AI ROUTES
+// ============================================================
+
+// AI Matching endpoint - Recommande les meilleurs freelancers
+app.post('/api/ai/match-freelancers', async (req, res) => {
+    const { skill, budget, timeline } = req.body;
+    try {
+        let query = `
+            SELECT id, full_name, skills, rating, salary, specialization, created_at
+            FROM users 
+            WHERE role = 'freelancer' 
+            AND status = 'active'
+        `;
+        const params = [];
+        
+        if (skill) {
+            query += ` AND (skills ILIKE $${params.length + 1} OR specialization ILIKE $${params.length + 1})`;
+            params.push(`%${skill}%`);
+        }
+        
+        if (budget) {
+            query += ` AND (salary <= $${params.length + 1} OR salary IS NULL)`;
+            params.push(budget);
+        }
+        
+        query += ` ORDER BY rating DESC NULLS LAST LIMIT 10`;
+        
+        const result = await pool.query(query, params);
+        
+        // Calculer le score pour chaque freelancer
+        const recommendations = result.rows.map(f => {
+            let score = 'D';
+            if (f.rating >= 4.5) score = 'A';
+            else if (f.rating >= 3.5) score = 'B';
+            else if (f.rating >= 2.5) score = 'C';
+            
+            return {
+                id: f.id,
+                name: f.full_name,
+                skills: f.skills,
+                specialization: f.specialization,
+                rating: f.rating || 0,
+                rate: f.salary || 'Negotiable',
+                score: score,
+                experience: Math.ceil((new Date() - new Date(f.created_at)) / (1000 * 60 * 60 * 24 * 365)) || 0
+            };
+        });
+        
+        res.json({ success: true, recommendations });
+    } catch (error) {
+        console.error('AI Matching error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// AI Scoring endpoint - Calcule le score A/B/C/D
+app.post('/api/ai/calculate-score', async (req, res) => {
+    const { userId } = req.body;
+    try {
+        const result = await pool.query(`
+            SELECT u.*, 
+                   COUNT(DISTINCT c.id) as total_calls,
+                   COUNT(DISTINCT CASE WHEN c.outcome = 'Meeting Booked' THEN c.id END) as meetings_booked
+            FROM users u
+            LEFT JOIN calls c ON c.caller_id = u.id
+            WHERE u.id = $1
+            GROUP BY u.id
+        `, [userId]);
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        
+        const user = result.rows[0];
+        const totalCalls = parseInt(user.total_calls) || 0;
+        const meetingsBooked = parseInt(user.meetings_booked) || 0;
+        const rating = user.rating || 0;
+        
+        const targetCalls = 50;
+        const targetMeetings = 2;
+        const targetRating = 5;
+        
+        const callScore = Math.min(100, (totalCalls / targetCalls) * 100);
+        const meetingScore = Math.min(100, (meetingsBooked / targetMeetings) * 100);
+        const ratingScore = (rating / targetRating) * 100;
+        
+        const avgScore = (callScore + meetingScore + ratingScore) / 3;
+        
+        let score = 'D';
+        let color = '#ef4444';
+        if (avgScore >= 90) { score = 'A'; color = '#10b981'; }
+        else if (avgScore >= 70) { score = 'B'; color = '#60a5fa'; }
+        else if (avgScore >= 50) { score = 'C'; color = '#f59e0b'; }
+        
+        res.json({ 
+            success: true, 
+            score, 
+            color,
+            details: {
+                totalCalls,
+                meetingsBooked,
+                rating,
+                callScore: Math.round(callScore),
+                meetingScore: Math.round(meetingScore),
+                ratingScore: Math.round(ratingScore),
+                overallScore: Math.round(avgScore)
+            }
+        });
+    } catch (error) {
+        console.error('AI Scoring error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// AI Revenue Prediction endpoint
+app.get('/api/ai/revenue-prediction', async (req, res) => {
+    try {
+        const invoices = await pool.query(`
+            SELECT DATE_TRUNC('month', created_at) as month, COALESCE(SUM(amount), 0) as revenue
+            FROM invoices 
+            WHERE status = 'paid'
+            GROUP BY month 
+            ORDER BY month ASC
+            LIMIT 12
+        `);
+        
+        const revenueData = invoices.rows.map(r => parseFloat(r.revenue));
+        
+        let prediction = { month1: 0, month2: 0, month3: 0, trend: 'stable', growthRate: 0 };
+        
+        if (revenueData.length >= 3) {
+            const last3Months = revenueData.slice(-3);
+            const avgGrowth = (last3Months[2] - last3Months[0]) / 2;
+            
+            prediction.month1 = Math.max(0, Math.round(last3Months[2] + avgGrowth));
+            prediction.month2 = Math.max(0, Math.round(last3Months[2] + (avgGrowth * 2)));
+            prediction.month3 = Math.max(0, Math.round(last3Months[2] + (avgGrowth * 3)));
+            
+            if (avgGrowth > 500) prediction.trend = 'growing';
+            else if (avgGrowth < -500) prediction.trend = 'declining';
+            
+            if (last3Months[2] > 0) {
+                prediction.growthRate = ((prediction.month1 / last3Months[2]) * 100 - 100).toFixed(1);
+            }
+        }
+        
+        // Calcul du churn risk
+        const clients = await pool.query("SELECT status FROM users WHERE role = 'client'");
+        const inactiveClients = clients.rows.filter(c => c.status === 'inactive').length;
+        const churnRisk = clients.rows.length > 0 ? (inactiveClients / clients.rows.length) * 100 : 0;
+        
+        res.json({ 
+            success: true, 
+            prediction,
+            churnRisk: churnRisk.toFixed(1),
+            historicalData: revenueData,
+            totalRevenue: revenueData.reduce((a,b) => a + b, 0)
+        });
+    } catch (error) {
+        console.error('Revenue prediction error:', error);
+        res.json({ 
+            success: true, 
+            prediction: { month1: 0, month2: 0, month3: 0, trend: 'stable', growthRate: 0 },
+            churnRisk: 0,
+            historicalData: [],
+            totalRevenue: 0
+        });
+    }
+});
+
+// AI Talent Recommendation (filtered)
+app.post('/api/ai/recommend-talent', async (req, res) => {
+    const { skill, maxRate, minRating } = req.body;
+    try {
+        let query = `
+            SELECT id, full_name, skills, rating, salary, specialization, created_at
+            FROM users 
+            WHERE role = 'freelancer' 
+            AND status = 'active'
+        `;
+        const params = [];
+        
+        if (skill) {
+            query += ` AND (skills ILIKE $${params.length + 1} OR specialization ILIKE $${params.length + 1})`;
+            params.push(`%${skill}%`);
+        }
+        
+        if (maxRate) {
+            query += ` AND (salary <= $${params.length + 1} OR salary IS NULL)`;
+            params.push(maxRate);
+        }
+        
+        if (minRating) {
+            query += ` AND rating >= $${params.length + 1}`;
+            params.push(minRating);
+        }
+        
+        query += ` ORDER BY rating DESC NULLS LAST LIMIT 20`;
+        
+        const result = await pool.query(query, params);
+        
+        const recommendations = result.rows.map(f => ({
+            id: f.id,
+            name: f.full_name,
+            skills: f.skills,
+            specialization: f.specialization,
+            rating: f.rating || 0,
+            rate: f.salary || 'Negotiable',
+            experience: Math.ceil((new Date() - new Date(f.created_at)) / (1000 * 60 * 60 * 24 * 365))
+        }));
+        
+        res.json({ success: true, recommendations, count: recommendations.length });
+    } catch (error) {
+        console.error('Talent recommendation error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================================
 // START SERVER
 // ============================================================
 if (process.env.NODE_ENV !== 'production') {
