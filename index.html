@@ -436,6 +436,20 @@
       .dashboard-grid { grid-template-columns: 1fr; }
       .charts-grid { grid-template-columns: 1fr; }
     }
+    /* Ajouter dans <style> */
+.skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+    height: 20px;
+    margin: 8px 0;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
   </style>
 </head>
 <body>
@@ -917,6 +931,39 @@
       loadDashboardData();
     }
   }, 30000);
+// Ajouter avant loadDashboardData()
+async function fetchWithAuth(url, options = {}) {
+    const token = localStorage.getItem('niche_token');
+    if (!token) {
+        window.location.href = '/login.html';
+        return null;
+    }
+    
+    const response = await fetch(url, {
+        ...options,
+        headers: {
+            ...options.headers,
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    
+    if (response.status === 401) {
+        localStorage.clear();
+        window.location.href = '/login.html';
+        throw new Error('Session expired');
+    }
+    return response;
+}
+
+// Remplacer fetch par fetchWithAuth dans loadDashboardData
+async function loadDashboardData() {
+    try {
+        const statsRes = await fetchWithAuth('/api/dashboard');
+        // ... reste du code
+    } catch (error) {
+        console.error('API error:', error);
+    }
+}
 </script>
 </body>
 </html>

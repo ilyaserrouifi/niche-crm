@@ -1474,3 +1474,36 @@ app.get('/api/screen-monitor/sessions/:freelancerId', authenticate, async (req, 
         res.status(500).json({ message: error.message });
     }
 });
+// ============================================================
+// AUTHENTICATION MIDDLEWARE
+// ============================================================
+const authenticateToken = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
+    
+    if (!token) {
+        return res.status(401).json({ message: 'Access denied. No token provided.' });
+    }
+    
+    try {
+        const decoded = Buffer.from(token, 'base64').toString();
+        const userId = decoded.split(':')[0];
+        req.userId = parseInt(userId);
+        next();
+    } catch (error) {
+        return res.status(403).json({ message: 'Invalid token.' });
+    }
+};
+
+// Appliquer à toutes les routes protégées (sauf auth)
+app.use('/api/users', authenticateToken);
+app.use('/api/clients', authenticateToken);
+app.use('/api/projects', authenticateToken);
+app.use('/api/tasks', authenticateToken);
+app.use('/api/finance', authenticateToken);
+app.use('/api/analytics', authenticateToken);
+app.use('/api/screen-monitor', authenticateToken);
+app.use('/api/cold-callers', authenticateToken);
+app.use('/api/outreachers', authenticateToken);
+app.use('/api/freelancers', authenticateToken);
+app.use('/api/staffing', authenticateToken);
