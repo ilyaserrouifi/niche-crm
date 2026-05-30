@@ -1032,3 +1032,397 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 module.exports = app;
+// ============================================================
+// SCREEN MONITORING ROUTES (À AJOUTER)
+// ============================================================
+
+// Démarrer une session d'écran
+app.post('/api/screen-monitor/start-session', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    
+    const { freelancerId, projectId } = req.body;
+    try {
+        const userId = parseInt(Buffer.from(token, 'base64').toString().split(':')[0]);
+        const result = await pool.query(
+            `INSERT INTO screen_sessions (freelancer_id, project_id, started_by, start_time, status)
+             VALUES ($1, $2, $3, NOW(), 'active')
+             RETURNING *`,
+            [freelancerId, projectId, userId]
+        );
+        res.json({ success: true, sessionId: result.rows[0].id });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Arrêter une session
+app.post('/api/screen-monitor/stop-session/:sessionId', async (req, res) => {
+    const { sessionId } = req.params;
+    try {
+        await pool.query(
+            `UPDATE screen_sessions SET end_time = NOW(), status = 'completed' WHERE id = $1`,
+            [sessionId]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Logger une activité de code
+app.post('/api/screen-monitor/log-activity', async (req, res) => {
+    const { sessionId, fileName, linesWritten, ide, language } = req.body;
+    try {
+        await pool.query(
+            `INSERT INTO code_activities (session_id, file_name, lines_written, ide, language, timestamp)
+             VALUES ($1, $2, $3, $4, $5, NOW())`,
+            [sessionId, fileName, linesWritten, ide, language]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Récupérer les sessions d'un freelancer
+app.get('/api/screen-monitor/sessions/:freelancerId', async (req, res) => {
+    const { freelancerId } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT * FROM screen_sessions WHERE freelancer_id = $1 ORDER BY start_time DESC`,
+            [freelancerId]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// ============================================================
+// CALL RECORDING ROUTES (Twilio)
+// ============================================================
+
+// Démarrer un appel
+app.post('/api/call-recording/start-call', async (req, res) => {
+    const { to, from, callerId, leadId } = req.body;
+    try {
+        // Simuler un appel (en production: Twilio)
+        const callSid = `CA${Date.now()}`;
+        const result = await pool.query(
+            `INSERT INTO calls (caller_id, lead_id, twilio_call_sid, status, start_time)
+             VALUES ($1, $2, $3, 'initiated', NOW())
+             RETURNING *`,
+            [callerId, leadId, callSid]
+        );
+        res.json({ success: true, callSid: callSid, callId: result.rows[0].id });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Récupérer les appels d'un caller
+app.get('/api/call-recording/calls/:callerId', async (req, res) => {
+    const { callerId } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT c.*, l.company_name, l.contact_name 
+             FROM calls c
+             LEFT JOIN leads l ON c.lead_id = l.id
+             WHERE c.caller_id = $1
+             ORDER BY c.start_time DESC`,
+            [callerId]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Télécharger un enregistrement
+app.get('/api/call-recording/download/:callId', async (req, res) => {
+    const { callId } = req.params;
+    try {
+        const result = await pool.query(`SELECT recording_url FROM calls WHERE id = $1`, [callId]);
+        if (result.rows.length === 0 || !result.rows[0].recording_url) {
+            return res.status(404).json({ message: 'Recording not found' });
+        }
+        res.redirect(result.rows[0].recording_url);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Générer un token Twilio
+app.get('/api/call-recording/token', async (req, res) => {
+    const { identity } = req.query;
+    try {
+        // Simuler un token (en production: Twilio AccessToken)
+        const token = Buffer.from(`${identity || 'user'}:${Date.now()}`).toString('base64');
+        res.json({ token: token });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// ============================================================
+// EXPORT REPORTS (CSV/PDF)
+// ============================================================
+
+// Exporter les appels en CSV
+app.get('/api/reports/export/calls', async (req, res) => {
+    const { startDate, endDate } = req.query;
+    try {
+        let query = 'SELECT * FROM calls WHERE 1=1';
+        const params = [];
+        if (startDate) {
+            query += ` AND start_time >= $${params.length + 1}`;
+            params.push(startDate);
+        }
+        if (endDate) {
+            query += ` AND start_time <= $${params.length + 1}`;
+            params.push(endDate);
+        }
+        query += ' ORDER BY start_time DESC';
+        
+        const result = await pool.query(query, params);
+        
+        let csv = 'ID,Caller ID,Lead,Start Time,Duration,Status,Recording\n';
+        result.rows.forEach(call => {
+            csv += `${call.id},${call.caller_id},${call.lead_id || ''},${call.start_time},${call.duration || 0},${call.status},${call.recording_url || ''}\n`;
+        });
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=calls_export.csv');
+        res.send(csv);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Exporter les sessions d'écran en CSV
+app.get('/api/reports/export/screen-sessions', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT s.*, u.full_name as freelancer_name
+            FROM screen_sessions s
+            LEFT JOIN users u ON s.freelancer_id = u.id
+            ORDER BY s.start_time DESC
+        `);
+        
+        let csv = 'Session ID,Freelancer,Start Time,End Time,Duration (min),Status\n';
+        result.rows.forEach(session => {
+            const duration = session.start_time && session.end_time ? 
+                Math.round((new Date(session.end_time) - new Date(session.start_time)) / 60000) : 0;
+            csv += `${session.id},${session.freelancer_name || ''},${session.start_time},${session.end_time || ''},${duration},${session.status}\n`;
+        });
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=screen_sessions.csv');
+        res.send(csv);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Exporter les leads en CSV
+app.get('/api/reports/export/leads', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT id, company_name, contact_name, contact_email, contact_phone, source, niche, estimated_value, stage, created_at
+            FROM leads
+            ORDER BY created_at DESC
+        `);
+        
+        let csv = 'ID,Company,Contact,Email,Phone,Source,Niche,Value,Stage,Created\n';
+        result.rows.forEach(lead => {
+            csv += `${lead.id},${lead.company_name},${lead.contact_name || ''},${lead.contact_email || ''},${lead.contact_phone || ''},${lead.source || ''},${lead.niche || ''},${lead.estimated_value || 0},${lead.stage},${lead.created_at}\n`;
+        });
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=leads_export.csv');
+        res.send(csv);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// ============================================================
+// TIME TRACKING ROUTES
+// ============================================================
+
+// Démarrer le time tracking
+app.post('/api/time-tracking/start', async (req, res) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    
+    const { sessionId } = req.body;
+    try {
+        const userId = parseInt(Buffer.from(token, 'base64').toString().split(':')[0]);
+        const result = await pool.query(
+            `INSERT INTO time_tracking (user_id, session_id, start_time, is_active)
+             VALUES ($1, $2, NOW(), true)
+             RETURNING *`,
+            [userId, sessionId]
+        );
+        res.json({ success: true, trackingId: result.rows[0].id });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Arrêter le time tracking
+app.post('/api/time-tracking/stop/:trackingId', async (req, res) => {
+    const { trackingId } = req.params;
+    try {
+        await pool.query(
+            `UPDATE time_tracking 
+             SET end_time = NOW(), 
+                 duration = EXTRACT(EPOCH FROM (NOW() - start_time))::INTEGER,
+                 is_active = false
+             WHERE id = $1`,
+            [trackingId]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Récupérer le temps total d'un utilisateur
+app.get('/api/time-tracking/total/:userId', async (req, res) => {
+    const { userId } = req.params;
+    const { period } = req.query; // day, week, month
+    try {
+        let interval = "INTERVAL '7 days'";
+        if (period === 'day') interval = "INTERVAL '1 day'";
+        if (period === 'month') interval = "INTERVAL '30 days'";
+        
+        const result = await pool.query(`
+            SELECT COALESCE(SUM(duration), 0) as total_seconds
+            FROM time_tracking
+            WHERE user_id = $1
+            AND start_time > NOW() - ${interval}
+        `, [userId]);
+        
+        res.json({ totalSeconds: parseInt(result.rows[0].total_seconds) });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// ============================================================
+// NOTIFICATION ROUTES
+// ============================================================
+
+// Créer une notification
+app.post('/api/notifications/create', async (req, res) => {
+    const { userId, type, title, message, severity } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO notifications (user_id, type, title, message, severity, is_read, created_at)
+             VALUES ($1, $2, $3, $4, $5, false, NOW())
+             RETURNING *`,
+            [userId, type, title, message, severity || 'info']
+        );
+        res.json({ success: true, notification: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Récupérer les notifications d'un utilisateur
+app.get('/api/notifications/:userId', async (req, res) => {
+    const { userId } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`,
+            [userId]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Marquer une notification comme lue
+app.put('/api/notifications/read/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        await pool.query(`UPDATE notifications SET is_read = true WHERE id = $1`, [id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// ============================================================
+// AUTOMATION RULES (Cron Jobs Simulation)
+// ============================================================
+
+// Vérifier les deadlines approchantes
+app.get('/api/automation/check-deadlines', async (req, res) => {
+    try {
+        // Tâches avec deadline dans les 3 jours
+        const result = await pool.query(`
+            SELECT t.*, p.name as project_name, u.full_name as assigned_to_name
+            FROM tasks t
+            LEFT JOIN projects p ON t.project_id = p.id
+            LEFT JOIN users u ON u.id = t.assigned_to::INTEGER
+            WHERE t.deadline BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '3 days'
+            AND t.status != 'Done'
+        `);
+        
+        // Créer des notifications automatiques
+        for (const task of result.rows) {
+            if (task.assigned_to) {
+                await pool.query(
+                    `INSERT INTO notifications (user_id, type, title, message, severity, created_at)
+                     VALUES ($1, 'deadline', 'Deadline Approaching', $2, 'warning', NOW())`,
+                    [task.assigned_to, `Task "${task.name}" is due on ${task.deadline}`]
+                );
+            }
+        }
+        
+        res.json({ success: true, checked: result.rows.length, notifications: result.rows.length });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// Vérifier les factures impayées
+app.get('/api/automation/check-invoices', async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT * FROM invoices 
+            WHERE status = 'Pending' 
+            AND invoice_date < CURRENT_DATE - INTERVAL '7 days'
+        `);
+        
+        res.json({ success: true, overdueInvoices: result.rows.length });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+// ============================================================
+// ADD THESE LINES AT THE END OF server.js (before module.exports)
+// ============================================================
+
+console.log('✅ All API routes loaded successfully');
+console.log('📊 Total endpoints:');
+console.log('   - Auth: /api/auth/*');
+console.log('   - Users: /api/users/*');
+console.log('   - Clients: /api/clients/*');
+console.log('   - Projects: /api/projects/*');
+console.log('   - Tasks: /api/tasks/*');
+console.log('   - Finance: /api/finance/*');
+console.log('   - Pipeline: /api/pipeline/*');
+console.log('   - Analytics: /api/analytics/*');
+console.log('   - AI: /api/ai/*');
+console.log('   - Screen Monitoring: /api/screen-monitor/*');
+console.log('   - Call Recording: /api/call-recording/*');
+console.log('   - Reports Export: /api/reports/export/*');
+console.log('   - Time Tracking: /api/time-tracking/*');
+console.log('   - Notifications: /api/notifications/*');
+console.log('   - Automation: /api/automation/*');
