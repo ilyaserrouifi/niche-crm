@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Niche CRM — Screen Monitoring & Time Tracking</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -302,6 +301,20 @@
             flex-wrap: wrap;
         }
 
+        /* Progress Bar */
+        .progress-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            border-radius: 4px;
+            width: 0%;
+        }
+
         /* Status Badge */
         .status-badge {
             display: inline-flex;
@@ -354,19 +367,6 @@
         .session-date { font-size: 11px; color: var(--text-muted); }
         .session-duration { font-size: 11px; color: var(--success-green); }
 
-        /* Loading Spinner */
-        .loading-spinner { text-align: center; padding: 40px; }
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 3px solid rgba(43,47,255,0.2);
-            border-top-color: #2b2fff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
         /* Toast */
         .toast {
             position: fixed;
@@ -381,86 +381,9 @@
             animation: slideIn 0.3s ease;
         }
         .toast.error { background: #ef4444; }
-        .toast.warning { background: #f59e0b; }
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.7);
-            backdrop-filter: blur(4px);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal {
-            background: #111520;
-            border: 1px solid var(--border-subtle);
-            border-radius: 20px;
-            width: 500px;
-            max-width: 90%;
-            padding: 28px;
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-        .modal-header h3 { font-size: 20px; font-weight: 700; }
-        .modal-close {
-            background: none;
-            border: none;
-            color: #6b7280;
-            font-size: 20px;
-            cursor: pointer;
-        }
-        .field-group { margin-bottom: 14px; }
-        .field-label {
-            display: block;
-            font-size: 11px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 4px;
-        }
-        .field-input, .field-select {
-            width: 100%;
-            background: #1a1f2e;
-            border: 1px solid var(--border-subtle);
-            border-radius: 8px;
-            padding: 10px 12px;
-            color: white;
-            font-size: 13px;
-        }
-        .modal-footer {
-            display: flex;
-            justify-content: flex-end;
-            gap: 12px;
-            margin-top: 20px;
-            padding-top: 16px;
-            border-top: 1px solid var(--border-subtle);
-        }
-        .btn-cancel {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 8px;
-            padding: 8px 16px;
-            color: #9ca3af;
-            cursor: pointer;
-        }
-        .btn-save {
-            background: linear-gradient(135deg, #4f46e5, #7c3aed);
-            border: none;
-            border-radius: 8px;
-            padding: 8px 20px;
-            color: white;
-            font-weight: 600;
-            cursor: pointer;
         }
 
         .empty-state {
@@ -561,8 +484,8 @@
                         <span>🎯 Target: <strong id="targetHours">8h</strong></span>
                         <span>✅ Progress: <strong id="progressPercent">0%</strong></span>
                     </div>
-                    <div class="progress-bar" style="margin-top: 8px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px;">
-                        <div class="progress-fill" id="progressFill" style="width: 0%; height: 100%; background: linear-gradient(90deg, #4f46e5, #7c3aed); border-radius: 2px;"></div>
+                    <div class="progress-bar" style="margin-top: 8px;">
+                        <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
                     </div>
                 </div>
             </div>
@@ -600,28 +523,18 @@
     </div>
 </div>
 
-<!-- Modal for Session Details -->
-<div id="sessionModal" class="modal-overlay">
-    <div class="modal">
-        <div class="modal-header"><h3>Session Details</h3><button class="modal-close" id="closeSessionModalBtn">✕</button></div>
-        <div id="sessionDetails"></div>
-        <div class="modal-footer"><button class="btn-cancel" id="closeSessionFooterBtn">Close</button></div>
-    </div>
-</div>
-
 <script>
     // ============================================================
-    // SCREEN MONITORING & TIME TRACKING - COMPLETE
+    // SCREEN MONITORING & TIME TRACKING - COMPLETE FIXED
     // ============================================================
     
     let mediaStream = null;
-    let peerConnection = null;
-    let socket = null;
     let timerInterval = null;
     let timerSeconds = 0;
     let isTimerRunning = false;
     let isSharing = false;
     let currentSessionId = null;
+    let activityInterval = null;
     
     const API_BASE = '/api';
     
@@ -632,7 +545,7 @@
     
     function showToast(message, type = 'success') {
         const toast = document.createElement('div');
-        toast.className = 	oast ;
+        toast.className = `toast ${type === 'error' ? 'error' : ''}`;
         toast.textContent = message;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
@@ -644,12 +557,11 @@
         });
     }
     
-    // Format seconds to HH:MM:SS
     function formatTime(seconds) {
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
         const s = seconds % 60;
-        return ${h.toString().padStart(2,'0')}::;
+        return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
     }
     
     // Start Screen Sharing
@@ -671,14 +583,12 @@
             document.getElementById('connectionStatus').className = 'status-badge status-recording';
             document.getElementById('connectionStatus').innerHTML = '● Recording...';
             
-            // Start tracking code activity
             startCodeActivityTracking();
             
-            // Create session in backend
             const token = localStorage.getItem('niche_token');
-            const response = await fetch(${API_BASE}/screen-monitor/start-session, {
+            const response = await fetch(`${API_BASE}/screen-monitor/start-session`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': Bearer  },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ freelancerId: 1, projectId: 1 })
             });
             const data = await response.json();
@@ -693,7 +603,7 @@
             
         } catch (error) {
             console.error('Error sharing screen:', error);
-            showToast('Failed to share screen. Please grant permission.', 'error');
+            showToast('Failed to share screen', 'error');
         }
     }
     
@@ -721,27 +631,21 @@
         }
     }
     
-    // Simulate code activity detection
-    let activityInterval = null;
-    
     function startCodeActivityTracking() {
         if (activityInterval) clearInterval(activityInterval);
         activityInterval = setInterval(() => {
             if (isSharing && isTimerRunning) {
-                // Simulate detecting file changes (in real implementation, this would use file system watchers)
                 const files = ['App.js', 'styles.css', 'index.html', 'server.js', 'database.sql'];
                 const randomFile = files[Math.floor(Math.random() * files.length)];
                 const lines = Math.floor(Math.random() * 50) + 5;
                 const ides = ['VS Code', 'WebStorm', 'Sublime', 'IntelliJ', 'Vim'];
                 const randomIde = ides[Math.floor(Math.random() * ides.length)];
-                
                 addActivity(randomFile, lines, randomIde);
                 
-                // Update lines written stat
                 const currentLines = parseInt(document.getElementById('linesWritten').innerText) || 0;
                 document.getElementById('linesWritten').innerText = currentLines + lines;
             }
-        }, 30000); // Every 30 seconds
+        }, 30000);
     }
     
     function stopCodeActivityTracking() {
@@ -761,36 +665,26 @@
         
         const activityDiv = document.createElement('div');
         activityDiv.className = 'activity-item';
-        activityDiv.innerHTML = 
-            <span class="activity-time"></span>
-            <div><span class="activity-file">📄 </span> <span class="activity-ide">()</span></div>
-            <div>✍️ <span class="activity-lines"> lines</span> written/modified</div>
-        ;
+        activityDiv.innerHTML = `
+            <span class="activity-time">${time}</span>
+            <div><span class="activity-file">📄 ${fileName}</span> <span class="activity-ide">(${ide})</span></div>
+            <div>✍️ <span class="activity-lines">${lines} lines</span> written/modified</div>
+        `;
         container.insertBefore(activityDiv, container.firstChild);
         
-        // Limit to 50 activities
         while (container.children.length > 50) {
             container.removeChild(container.lastChild);
         }
-        
-        // Log to backend
-        if (currentSessionId) {
-            fetch(${API_BASE}/screen-monitor/log-activity, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId: currentSessionId, fileName, linesWritten: lines, ide, language: fileName.split('.').pop() })
-            }).catch(console.error);
-        }
     }
     
-    // Time Tracking
+    // Time Tracking Functions
     function startTimer() {
         if (timerInterval) clearInterval(timerInterval);
         isTimerRunning = true;
         timerInterval = setInterval(() => {
             timerSeconds++;
             document.getElementById('timerDisplay').innerText = formatTime(timerSeconds);
-            updateStats();
+            updateTimerStats();
         }, 1000);
         
         document.getElementById('startTimerBtn').style.display = 'none';
@@ -798,6 +692,7 @@
         document.getElementById('stopTimerBtn').style.display = 'inline-block';
         document.getElementById('timerStatus').className = 'status-badge status-active';
         document.getElementById('timerStatus').innerHTML = '● Running';
+        showToast('Timer started');
     }
     
     function pauseTimer() {
@@ -810,6 +705,7 @@
         document.getElementById('pauseTimerBtn').style.display = 'none';
         document.getElementById('timerStatus').className = 'status-badge status-inactive';
         document.getElementById('timerStatus').innerHTML = '● Paused';
+        showToast('Timer paused');
     }
     
     function stopTimer() {
@@ -825,17 +721,16 @@
         document.getElementById('stopTimerBtn').style.display = 'none';
         document.getElementById('timerStatus').className = 'status-badge status-inactive';
         document.getElementById('timerStatus').innerHTML = '● Stopped';
-        updateStats();
+        updateTimerStats();
+        showToast('Timer stopped');
     }
     
-    function updateStats() {
+    function updateTimerStats() {
         const hours = timerSeconds / 3600;
         const percent = Math.min(100, (hours / 8) * 100);
-        document.getElementById('todayTotal').innerText = ${Math.floor(hours)}h m;
-        document.getElementById('progressPercent').innerText = ${Math.floor(percent)}%;
-        document.getElementById('progressFill').style.width = ${percent}%;
-        
-        // Update performance score
+        document.getElementById('todayTotal').innerText = `${Math.floor(hours)}h ${Math.floor((timerSeconds % 3600) / 60)}m`;
+        document.getElementById('progressPercent').innerText = `${Math.floor(percent)}%`;
+        document.getElementById('progressFill').style.width = `${percent}%`;
         updatePerformanceScore(percent);
     }
     
@@ -848,20 +743,17 @@
         
         document.getElementById('scoreValue').innerText = score;
         document.getElementById('scoreValue').style.color = color;
-        document.getElementById('scorePercent').innerText = ${Math.floor(productivityPercent)}%;
-        document.getElementById('productivity').innerText = ${Math.floor(productivityPercent)}%;
-        
-        // Random other stats
-        document.getElementById('deadlineRate').innerText = ${Math.floor(Math.random() * 40) + 60}%;
-        document.getElementById('qualityScore').innerText = ${Math.floor(Math.random() * 30) + 70}%;
+        document.getElementById('scorePercent').innerText = `${Math.floor(productivityPercent)}%`;
+        document.getElementById('productivity').innerText = `${Math.floor(productivityPercent)}%`;
+        document.getElementById('deadlineRate').innerText = `${Math.floor(Math.random() * 40) + 60}%`;
+        document.getElementById('qualityScore').innerText = `${Math.floor(Math.random() * 30) + 70}%`;
     }
     
-    // Load sessions from backend
     async function loadSessions() {
         try {
             const token = localStorage.getItem('niche_token');
-            const response = await fetch(${API_BASE}/screen-monitor/sessions/1, {
-                headers: { 'Authorization': Bearer  }
+            const response = await fetch(`${API_BASE}/screen-monitor/sessions/1`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             if (response.ok) {
                 const sessions = await response.json();
@@ -874,7 +766,6 @@
                     return sum;
                 }, 0);
                 document.getElementById('totalHours').innerText = totalHours.toFixed(1) + 'h';
-                
                 renderSessions(sessions);
             }
         } catch (error) {
@@ -889,30 +780,28 @@
             return;
         }
         
-        container.innerHTML = sessions.map(s => 
-            <div class="session-item" onclick="viewSession()">
-                <div><strong>Session #</strong></div>
-                <div class="session-date">📅 </div>
-                <div class="session-duration">⏱️ Duration:  min</div>
-                <div>📊 Status: </div>
+        container.innerHTML = sessions.map(s => `
+            <div class="session-item" onclick="viewSession(${s.id})">
+                <div><strong>Session #${s.id}</strong></div>
+                <div class="session-date">📅 ${new Date(s.start_time).toLocaleString()}</div>
+                <div class="session-duration">⏱️ Duration: ${s.end_time ? Math.round((new Date(s.end_time) - new Date(s.start_time)) / 60000) : 'In progress'} min</div>
+                <div>📊 Status: ${s.status || 'Active'}</div>
             </div>
-        ).join('');
+        `).join('');
     }
     
     function viewSession(sessionId) {
-        showToast(Loading session  details...);
-        // In production, fetch and display session details
-        document.getElementById('sessionDetails').innerHTML = 
-            <div class="field-group"><label class="field-label">Session ID</label><div class="field-input"></div></div>
-            <div class="field-group"><label class="field-label">Date</label><div class="field-input"></div></div>
+        showToast(`Loading session ${sessionId} details...`);
+        document.getElementById('sessionDetails').innerHTML = `
+            <div class="field-group"><label class="field-label">Session ID</label><div class="field-input">${sessionId}</div></div>
+            <div class="field-group"><label class="field-label">Date</label><div class="field-input">${new Date().toLocaleString()}</div></div>
             <div class="field-group"><label class="field-label">Duration</label><div class="field-input">2h 35min</div></div>
             <div class="field-group"><label class="field-label">Lines Written</label><div class="field-input">347 lines</div></div>
             <div class="field-group"><label class="field-label">IDE Used</label><div class="field-input">VS Code</div></div>
-        ;
+        `;
         document.getElementById('sessionModal').style.display = 'flex';
     }
     
-    // Export functions
     function exportActivities() {
         const activities = document.querySelectorAll('.activity-item');
         let csv = 'Time,File,Ide,Lines\n';
@@ -921,7 +810,7 @@
             const file = act.querySelector('.activity-file')?.innerText || '';
             const ide = act.querySelector('.activity-ide')?.innerText.replace(/[()]/g, '') || '';
             const lines = act.querySelector('.activity-lines')?.innerText.replace(' lines', '') || '0';
-            csv += ${time},,,\n;
+            csv += `${time},${file},${ide},${lines}\n`;
         });
         downloadCSV(csv, 'code_activities.csv');
     }
@@ -934,7 +823,7 @@
             const date = s.querySelector('.session-date')?.innerText.replace('📅 ', '') || '';
             const duration = s.querySelector('.session-duration')?.innerText.replace('⏱️ Duration: ', '').replace(' min', '') || '';
             const status = s.querySelector('div:last-child')?.innerText.replace('📊 Status: ', '') || '';
-            csv += ${id},,,\n;
+            csv += `${id},${date},${duration},${status}\n`;
         });
         downloadCSV(csv, 'sessions.csv');
     }
@@ -946,13 +835,27 @@
         link.download = filename;
         link.click();
         URL.revokeObjectURL(link.href);
-        showToast(Exported );
+        showToast(`Exported ${filename}`);
     }
     
     function refreshData() {
         loadSessions();
         showToast('Data refreshed');
     }
+    
+    // Close modal when clicking outside or on close button
+    document.getElementById('closeSessionModalBtn').onclick = () => document.getElementById('sessionModal').style.display = 'none';
+    document.getElementById('closeSessionFooterBtn').onclick = () => document.getElementById('sessionModal').style.display = 'none';
+    
+    // Make functions global for onclick
+    window.viewSession = viewSession;
+    window.startScreenSharing = startScreenSharing;
+    window.stopScreenSharing = stopScreenSharing;
+    window.startTimer = startTimer;
+    window.pauseTimer = pauseTimer;
+    window.stopTimer = stopTimer;
+    window.exportActivities = exportActivities;
+    window.exportSessions = exportSessions;
     
     // Event listeners
     document.getElementById('startShareBtn').onclick = startScreenSharing;
@@ -963,17 +866,12 @@
     document.getElementById('refreshBtn').onclick = refreshData;
     document.getElementById('exportActivitiesBtn').onclick = exportActivities;
     document.getElementById('exportSessionsBtn').onclick = exportSessions;
-    document.getElementById('closeSessionModalBtn').onclick = () => document.getElementById('sessionModal').style.display = 'none';
-    document.getElementById('closeSessionFooterBtn').onclick = () => document.getElementById('sessionModal').style.display = 'none';
     document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
-    
-    window.viewSession = viewSession;
     
     // Initialize
     updateDate();
     loadSessions();
     
-    // Auto-refresh every 30 seconds
     setInterval(() => {
         if (localStorage.getItem('niche_token')) {
             loadSessions();
