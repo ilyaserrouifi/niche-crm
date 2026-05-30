@@ -112,7 +112,6 @@ app.post('/api/users/avatar', upload.single('avatar'), async (req, res) => {
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
     try {
         const userId = parseInt(Buffer.from(token, 'base64').toString().split(':')[0]);
-        // Stocker l'URL de l'avatar (ici on simule, dans la réalité on uploaderait vers S3)
         const avatarUrl = req.file ? `/uploads/avatars/${userId}.jpg` : null;
         if (avatarUrl) {
             await pool.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatarUrl, userId]);
@@ -124,11 +123,11 @@ app.post('/api/users/avatar', upload.single('avatar'), async (req, res) => {
 });
 
 // ============================================================
-// CLIENTS ROUTES (COMPLET)
+// CLIENTS ROUTES (CORRIGÉ - utilise la table clients)
 // ============================================================
 app.get('/api/clients', async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM users WHERE role = 'client' ORDER BY created_at DESC");
+        const result = await pool.query("SELECT * FROM clients ORDER BY id DESC");
         res.json(result.rows);
     } catch (error) { 
         res.status(500).json({ message: error.message }); 
@@ -137,7 +136,7 @@ app.get('/api/clients', async (req, res) => {
 
 app.get('/api/clients/:id', async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM users WHERE id = $1 AND role = 'client'", [req.params.id]);
+        const result = await pool.query("SELECT * FROM clients WHERE id = $1", [req.params.id]);
         if (result.rows.length === 0) return res.status(404).json({ message: 'Client not found' });
         res.json(result.rows[0]);
     } catch (error) { 
@@ -182,7 +181,7 @@ app.delete('/api/clients/:id', async (req, res) => {
 });
 
 // ============================================================
-// PROJECTS ROUTES (COMPLET)
+// PROJECTS ROUTES
 // ============================================================
 app.get('/api/projects', async (req, res) => {
     try {
@@ -249,7 +248,7 @@ app.delete('/api/projects/:id', async (req, res) => {
 });
 
 // ============================================================
-// TASKS ROUTES (COMPLET)
+// TASKS ROUTES
 // ============================================================
 app.get('/api/tasks', async (req, res) => {
     try {
@@ -306,7 +305,7 @@ app.delete('/api/tasks/:id', async (req, res) => {
 });
 
 // ============================================================
-// FINANCE ROUTES (COMPLET)
+// FINANCE ROUTES
 // ============================================================
 app.get('/api/finance/invoices', async (req, res) => {
     try { 
@@ -544,16 +543,11 @@ app.get('/api/leads', async (req, res) => {
 
 app.get('/api/leads/geo', async (req, res) => {
     try {
-        // Simuler des leads avec coordonnées géographiques
         const mockLeads = [
             { id: 1, company: 'TechCorp USA', contact: 'John Doe', value: 50000, stage: 'LEAD', lat: 40.7128, lng: -74.0060, country: 'USA' },
             { id: 2, company: 'FinTech UK', contact: 'Jane Smith', value: 75000, stage: 'MEETING', lat: 51.5074, lng: -0.1278, country: 'UK' },
             { id: 3, company: 'SaaS France', contact: 'Pierre Martin', value: 45000, stage: 'QUALIFIED', lat: 48.8566, lng: 2.3522, country: 'France' },
-            { id: 4, company: 'E-commerce DE', contact: 'Hans Mueller', value: 62000, stage: 'PROPOSAL', lat: 52.5200, lng: 13.4050, country: 'Germany' },
-            { id: 5, company: 'HealthTech ES', contact: 'Maria Garcia', value: 38000, stage: 'CONTACTED', lat: 40.4168, lng: -3.7038, country: 'Spain' },
-            { id: 6, company: 'Energy CA', contact: 'David Lee', value: 89000, stage: 'NEGOTIATION', lat: 43.6532, lng: -79.3832, country: 'Canada' },
-            { id: 7, company: 'AI Startup MA', contact: 'Youssef Alaoui', value: 55000, stage: 'LEAD', lat: 33.5731, lng: -7.5898, country: 'Morocco' },
-            { id: 8, company: 'Cloud IT AE', contact: 'Ahmed Mansouri', value: 120000, stage: 'MEETING', lat: 25.2048, lng: 55.2708, country: 'UAE' }
+            { id: 4, company: 'AI Startup MA', contact: 'Youssef Alaoui', value: 55000, stage: 'LEAD', lat: 33.5731, lng: -7.5898, country: 'Morocco' }
         ];
         res.json(mockLeads);
     } catch (error) {
@@ -570,7 +564,7 @@ app.get('/api/dashboard/stats', async (req, res) => {
             pool.query("SELECT COUNT(*) FROM leads"),
             pool.query("SELECT COUNT(*) FROM leads WHERE stage = 'CLOSED_WON'"),
             pool.query("SELECT COALESCE(SUM(estimated_value), 0) FROM leads WHERE stage = 'CLOSED_WON'"),
-            pool.query("SELECT COUNT(*) FROM users WHERE role = 'client'"),
+            pool.query("SELECT COUNT(*) FROM clients"),
             pool.query("SELECT COUNT(*) FROM projects")
         ]);
         
@@ -591,8 +585,6 @@ app.get('/api/dashboard', async (req, res) => {
         const pipelineTotal = await pool.query("SELECT COALESCE(SUM(estimated_value), 0) FROM leads WHERE stage NOT IN ('CLOSED_WON', 'CLOSED_LOST')");
         const mrr = await pool.query("SELECT COALESCE(SUM(amount), 0) FROM invoices WHERE status = 'paid' AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)");
         const expenses = await pool.query("SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE EXTRACT(MONTH FROM expense_date) = EXTRACT(MONTH FROM CURRENT_DATE)");
-        const totalLeads = await pool.query("SELECT COUNT(*) FROM leads");
-        const meetingsBooked = await pool.query("SELECT COUNT(*) FROM leads WHERE stage = 'MEETING_BOOKED'");
         
         res.json({
             todayCalls: 0,
@@ -606,9 +598,7 @@ app.get('/api/dashboard', async (req, res) => {
             needsAttention: '—',
             mrr: parseFloat(mrr.rows[0].coalesce) || 0,
             expenses: parseFloat(expenses.rows[0].coalesce) || 0,
-            netProfit: (parseFloat(mrr.rows[0].coalesce) || 0) - (parseFloat(expenses.rows[0].coalesce) || 0),
-            totalLeads: parseInt(totalLeads.rows[0].count) || 0,
-            meetingsBooked: parseInt(meetingsBooked.rows[0].count) || 0
+            netProfit: (parseFloat(mrr.rows[0].coalesce) || 0) - (parseFloat(expenses.rows[0].coalesce) || 0)
         });
     } catch (error) {
         res.status(500).json({ message: 'Erreur serveur' });
@@ -1008,35 +998,8 @@ app.post('/api/calls/schedule', async (req, res) => {
 });
 
 // ============================================================
-// START SERVER
+// SCREEN MONITORING ROUTES
 // ============================================================
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log(`🚀 Server running on http://localhost:${PORT}`);
-        console.log(`📊 API endpoints ready:`);
-        console.log(`   - GET  /api/health`);
-        console.log(`   - POST /api/auth/login`);
-        console.log(`   - POST /api/auth/register`);
-        console.log(`   - GET  /api/dashboard`);
-        console.log(`   - CRUD /api/clients`);
-        console.log(`   - CRUD /api/projects`);
-        console.log(`   - CRUD /api/tasks`);
-        console.log(`   - CRUD /api/finance/*`);
-        console.log(`   - GET  /api/analytics/*`);
-        console.log(`   - GET  /api/cold-callers`);
-        console.log(`   - GET  /api/outreachers`);
-        console.log(`   - GET  /api/freelancers`);
-        console.log(`   - CRUD /api/staffing/*`);
-        console.log(`   - POST /api/ai/match-freelancers`);
-    });
-}
-
-module.exports = app;
-// ============================================================
-// SCREEN MONITORING ROUTES (À AJOUTER)
-// ============================================================
-
-// Démarrer une session d'écran
 app.post('/api/screen-monitor/start-session', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
@@ -1056,7 +1019,6 @@ app.post('/api/screen-monitor/start-session', async (req, res) => {
     }
 });
 
-// Arrêter une session
 app.post('/api/screen-monitor/stop-session/:sessionId', async (req, res) => {
     const { sessionId } = req.params;
     try {
@@ -1070,7 +1032,6 @@ app.post('/api/screen-monitor/stop-session/:sessionId', async (req, res) => {
     }
 });
 
-// Logger une activité de code
 app.post('/api/screen-monitor/log-activity', async (req, res) => {
     const { sessionId, fileName, linesWritten, ide, language } = req.body;
     try {
@@ -1085,7 +1046,6 @@ app.post('/api/screen-monitor/log-activity', async (req, res) => {
     }
 });
 
-// Récupérer les sessions d'un freelancer
 app.get('/api/screen-monitor/sessions/:freelancerId', async (req, res) => {
     const { freelancerId } = req.params;
     try {
@@ -1100,14 +1060,11 @@ app.get('/api/screen-monitor/sessions/:freelancerId', async (req, res) => {
 });
 
 // ============================================================
-// CALL RECORDING ROUTES (Twilio)
+// CALL RECORDING ROUTES
 // ============================================================
-
-// Démarrer un appel
 app.post('/api/call-recording/start-call', async (req, res) => {
     const { to, from, callerId, leadId } = req.body;
     try {
-        // Simuler un appel (en production: Twilio)
         const callSid = `CA${Date.now()}`;
         const result = await pool.query(
             `INSERT INTO calls (caller_id, lead_id, twilio_call_sid, status, start_time)
@@ -1121,7 +1078,6 @@ app.post('/api/call-recording/start-call', async (req, res) => {
     }
 });
 
-// Récupérer les appels d'un caller
 app.get('/api/call-recording/calls/:callerId', async (req, res) => {
     const { callerId } = req.params;
     try {
@@ -1139,7 +1095,6 @@ app.get('/api/call-recording/calls/:callerId', async (req, res) => {
     }
 });
 
-// Télécharger un enregistrement
 app.get('/api/call-recording/download/:callId', async (req, res) => {
     const { callId } = req.params;
     try {
@@ -1153,11 +1108,9 @@ app.get('/api/call-recording/download/:callId', async (req, res) => {
     }
 });
 
-// Générer un token Twilio
 app.get('/api/call-recording/token', async (req, res) => {
     const { identity } = req.query;
     try {
-        // Simuler un token (en production: Twilio AccessToken)
         const token = Buffer.from(`${identity || 'user'}:${Date.now()}`).toString('base64');
         res.json({ token: token });
     } catch (error) {
@@ -1166,10 +1119,8 @@ app.get('/api/call-recording/token', async (req, res) => {
 });
 
 // ============================================================
-// EXPORT REPORTS (CSV/PDF)
+// EXPORT REPORTS
 // ============================================================
-
-// Exporter les appels en CSV
 app.get('/api/reports/export/calls', async (req, res) => {
     const { startDate, endDate } = req.query;
     try {
@@ -1200,7 +1151,6 @@ app.get('/api/reports/export/calls', async (req, res) => {
     }
 });
 
-// Exporter les sessions d'écran en CSV
 app.get('/api/reports/export/screen-sessions', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -1225,7 +1175,6 @@ app.get('/api/reports/export/screen-sessions', async (req, res) => {
     }
 });
 
-// Exporter les leads en CSV
 app.get('/api/reports/export/leads', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -1250,8 +1199,6 @@ app.get('/api/reports/export/leads', async (req, res) => {
 // ============================================================
 // TIME TRACKING ROUTES
 // ============================================================
-
-// Démarrer le time tracking
 app.post('/api/time-tracking/start', async (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
@@ -1271,7 +1218,6 @@ app.post('/api/time-tracking/start', async (req, res) => {
     }
 });
 
-// Arrêter le time tracking
 app.post('/api/time-tracking/stop/:trackingId', async (req, res) => {
     const { trackingId } = req.params;
     try {
@@ -1289,10 +1235,9 @@ app.post('/api/time-tracking/stop/:trackingId', async (req, res) => {
     }
 });
 
-// Récupérer le temps total d'un utilisateur
 app.get('/api/time-tracking/total/:userId', async (req, res) => {
     const { userId } = req.params;
-    const { period } = req.query; // day, week, month
+    const { period } = req.query;
     try {
         let interval = "INTERVAL '7 days'";
         if (period === 'day') interval = "INTERVAL '1 day'";
@@ -1314,8 +1259,6 @@ app.get('/api/time-tracking/total/:userId', async (req, res) => {
 // ============================================================
 // NOTIFICATION ROUTES
 // ============================================================
-
-// Créer une notification
 app.post('/api/notifications/create', async (req, res) => {
     const { userId, type, title, message, severity } = req.body;
     try {
@@ -1331,7 +1274,6 @@ app.post('/api/notifications/create', async (req, res) => {
     }
 });
 
-// Récupérer les notifications d'un utilisateur
 app.get('/api/notifications/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
@@ -1345,7 +1287,6 @@ app.get('/api/notifications/:userId', async (req, res) => {
     }
 });
 
-// Marquer une notification comme lue
 app.put('/api/notifications/read/:id', async (req, res) => {
     const { id } = req.params;
     try {
@@ -1357,13 +1298,10 @@ app.put('/api/notifications/read/:id', async (req, res) => {
 });
 
 // ============================================================
-// AUTOMATION RULES (Cron Jobs Simulation)
+// AUTOMATION RULES
 // ============================================================
-
-// Vérifier les deadlines approchantes
 app.get('/api/automation/check-deadlines', async (req, res) => {
     try {
-        // Tâches avec deadline dans les 3 jours
         const result = await pool.query(`
             SELECT t.*, p.name as project_name, u.full_name as assigned_to_name
             FROM tasks t
@@ -1373,7 +1311,6 @@ app.get('/api/automation/check-deadlines', async (req, res) => {
             AND t.status != 'Done'
         `);
         
-        // Créer des notifications automatiques
         for (const task of result.rows) {
             if (task.assigned_to) {
                 await pool.query(
@@ -1390,7 +1327,6 @@ app.get('/api/automation/check-deadlines', async (req, res) => {
     }
 });
 
-// Vérifier les factures impayées
 app.get('/api/automation/check-invoices', async (req, res) => {
     try {
         const result = await pool.query(`
@@ -1406,26 +1342,8 @@ app.get('/api/automation/check-invoices', async (req, res) => {
 });
 
 // ============================================================
-// ADD THESE LINES AT THE END OF server.js (before module.exports)
+// WEBSOCKET & SERVER START
 // ============================================================
-
-console.log('✅ All API routes loaded successfully');
-console.log('📊 Total endpoints:');
-console.log('   - Auth: /api/auth/*');
-console.log('   - Users: /api/users/*');
-console.log('   - Clients: /api/clients/*');
-console.log('   - Projects: /api/projects/*');
-console.log('   - Tasks: /api/tasks/*');
-console.log('   - Finance: /api/finance/*');
-console.log('   - Pipeline: /api/pipeline/*');
-console.log('   - Analytics: /api/analytics/*');
-console.log('   - AI: /api/ai/*');
-console.log('   - Screen Monitoring: /api/screen-monitor/*');
-console.log('   - Call Recording: /api/call-recording/*');
-console.log('   - Reports Export: /api/reports/export/*');
-console.log('   - Time Tracking: /api/time-tracking/*');
-console.log('   - Notifications: /api/notifications/*');
-console.log('   - Automation: /api/automation/*');
 const http = require('http');
 const socketIo = require('socket.io');
 
@@ -1434,7 +1352,6 @@ const io = socketIo(server, {
     cors: { origin: "*" }
 });
 
-// WebSocket events
 io.on('connection', (socket) => {
     console.log('🟢 Client connected:', socket.id);
     
@@ -1455,7 +1372,26 @@ io.on('connection', (socket) => {
     });
 });
 
-// Remplacer app.listen par server.listen
+console.log('✅ All API routes loaded successfully');
+console.log('📊 Total endpoints:');
+console.log('   - Auth: /api/auth/*');
+console.log('   - Users: /api/users/*');
+console.log('   - Clients: /api/clients/* (table clients)');
+console.log('   - Projects: /api/projects/*');
+console.log('   - Tasks: /api/tasks/*');
+console.log('   - Finance: /api/finance/*');
+console.log('   - Pipeline: /api/pipeline/*');
+console.log('   - Analytics: /api/analytics/*');
+console.log('   - AI: /api/ai/*');
+console.log('   - Screen Monitoring: /api/screen-monitor/*');
+console.log('   - Call Recording: /api/call-recording/*');
+console.log('   - Reports Export: /api/reports/export/*');
+console.log('   - Time Tracking: /api/time-tracking/*');
+console.log('   - Notifications: /api/notifications/*');
+console.log('   - Automation: /api/automation/*');
+
 server.listen(PORT, () => {
     console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+
+module.exports = app;
