@@ -1395,3 +1395,82 @@ server.listen(PORT, () => {
 });
 
 module.exports = app;
+// ============================================================
+// SCREEN MONITORING ROUTES (Version corrigée)
+// ============================================================
+
+// Middleware d'authentification simple
+const authenticate = (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Unauthorized' });
+    try {
+        const userId = parseInt(Buffer.from(token, 'base64').toString().split(':')[0]);
+        req.userId = userId;
+        next();
+    } catch (error) {
+        return res.status(401).json({ message: 'Invalid token' });
+    }
+};
+
+// Démarrer une session d'écran
+app.post('/api/screen-monitor/start-session', authenticate, async (req, res) => {
+    const { freelancerId, projectId } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO screen_sessions (freelancer_id, project_id, started_by, start_time, status)
+             VALUES ($1, $2, $3, NOW(), 'active')
+             RETURNING *`,
+            [freelancerId || req.userId, projectId, req.userId]
+        );
+        res.json({ success: true, sessionId: result.rows[0].id });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Arrêter une session
+app.post('/api/screen-monitor/stop-session/:sessionId', authenticate, async (req, res) => {
+    const { sessionId } = req.params;
+    try {
+        await pool.query(
+            `UPDATE screen_sessions SET end_time = NOW(), status = 'completed' WHERE id = $1`,
+            [sessionId]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Logger une activité de code
+app.post('/api/screen-monitor/log-activity', authenticate, async (req, res) => {
+    const { sessionId, fileName, linesWritten, ide, language } = req.body;
+    if (!sessionId) {
+        return res.status(400).json({ success: false, message: 'sessionId is required' });
+    }
+    try {
+        await pool.query(
+            `INSERT INTO code_activities (session_id, file_name, lines_written, ide, language, timestamp)
+             VALUES ($1, $2, $3, $4, $5, NOW())`,
+            [sessionId, fileName, linesWritten, ide, language]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Log activity error:", error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Récupérer les sessions d'un utilisateur
+app.get('/api/screen-monitor/sessions/:freelancerId', authenticate, async (req, res) => {
+    const { freelancerId } = req.params;
+    try {
+        const result = await pool.query(
+            `SELECT * FROM screen_sessions WHERE freelancer_id = $1 ORDER BY start_time DESC`,
+            [freelancerId]
+        );
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
