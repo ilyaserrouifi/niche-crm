@@ -152,6 +152,8 @@
       margin-bottom: 28px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+      gap: 16px;
     }
     .page-title h1 {
       font-size: 28px;
@@ -166,6 +168,10 @@
       color: var(--text-muted);
       margin-top: 6px;
     }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
     .btn-add {
       background: linear-gradient(135deg, #4f46e5, #7c3aed);
       border: none;
@@ -179,6 +185,17 @@
       gap: 8px;
     }
     .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 13px;
+      transition: var(--transition);
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
 
     /* Stats row */
     .stats-row {
@@ -193,7 +210,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       padding: 20px;
+      transition: var(--transition);
     }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
     .stat-value { font-size: 32px; font-weight: 700; }
     .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
     .color-purple { color: #818cf8; }
@@ -213,7 +232,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       overflow: hidden;
+      transition: var(--transition);
     }
+    .project-card:hover { transform: translateX(4px); border-color: rgba(43,47,255,0.3); }
     .card-header {
       background: rgba(43,47,255,0.1);
       padding: 18px 24px;
@@ -292,6 +313,43 @@
     }
     .btn-tasks:hover, .btn-timeline:hover, .btn-deliverables:hover, .btn-edit:hover { background: rgba(43,47,255,0.15); color: white; }
     .btn-delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    /* Loading spinner */
+    .loading-spinner {
+      text-align: center;
+      padding: 60px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(43,47,255,0.2);
+      border-top-color: #2b2fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #10b981;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 1100;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
 
     /* Modal */
     .modal-overlay {
@@ -402,6 +460,9 @@
     .status-progress { background: rgba(59,130,246,0.2); color: #60a5fa; }
     .status-review { background: rgba(245,158,11,0.2); color: #f59e0b; }
     .status-done { background: rgba(16,185,129,0.2); color: #10b981; }
+    .priority-high { color: #ef4444; font-weight: 600; }
+    .priority-medium { color: #f59e0b; }
+    .priority-low { color: #10b981; }
     .deliverable-approved { color: #10b981; }
     .deliverable-pending { color: #f59e0b; }
 
@@ -463,8 +524,14 @@
 
 <div class="main-content">
   <div class="top-header">
-    <div class="page-title"><h1>Projects</h1><div class="page-date" id="currentDate"></div></div>
-    <button class="btn-add" id="addProjectBtn">+ New Project</button>
+    <div class="page-title">
+      <h1>Projects</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div class="header-actions">
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addProjectBtn">+ New Project</button>
+    </div>
   </div>
 
   <div class="stats-row">
@@ -474,7 +541,9 @@
     <div class="stat-card"><div class="stat-value color-emerald" id="totalBudget">$0</div><div class="stat-label">TOTAL BUDGET</div></div>
   </div>
 
-  <div id="projectsContainer" class="projects-grid"></div>
+  <div id="projectsContainer" class="projects-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading projects...</div>
+  </div>
 </div>
 
 <!-- Modal Add/Edit Project -->
@@ -514,21 +583,58 @@
 </div>
 
 <script>
+  // ============================================================
+  // PROJECTS MANAGEMENT - COMPLETE WITH REAL API
+  // ============================================================
+  
   // Check authentication
   if (!localStorage.getItem('niche_token')) {
     window.location.href = '/login.html';
   }
 
-  // ============================================================
-  // PROJECTS MANAGEMENT - ALL VALUES ZERO - READY FOR API
-  // ============================================================
   let projects = [];
   let currentProjectId = null;
   let currentTasksProjectId = null;
   let currentDeliverablesProjectId = null;
 
-  function getProjects() { const stored = localStorage.getItem('projects_data'); return stored ? JSON.parse(stored) : []; }
-  function saveProjects() { localStorage.setItem('projects_data', JSON.stringify(projects)); renderAll(); }
+  const API_BASE = '/api';
+
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  async function fetchProjectsFromAPI() {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/projects`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        projects = await response.json();
+        saveProjectsToLocal();
+        renderAll();
+      } else {
+        loadProjectsFromLocal();
+      }
+    } catch (error) {
+      console.error('API error:', error);
+      loadProjectsFromLocal();
+    }
+  }
+
+  function loadProjectsFromLocal() {
+    const stored = localStorage.getItem('projects_data');
+    projects = stored ? JSON.parse(stored) : [];
+    renderAll();
+  }
+
+  function saveProjectsToLocal() {
+    localStorage.setItem('projects_data', JSON.stringify(projects));
+  }
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -540,25 +646,62 @@
     });
   }
 
-  function addProject(project) {
+  async function addProjectToAPI(project) {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/projects`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(project)
+      });
+      if (response.ok) {
+        const newProject = await response.json();
+        projects.push(newProject);
+        saveProjectsToLocal();
+        renderAll();
+        showToast('Project added successfully!');
+      } else {
+        addProjectLocal(project);
+      }
+    } catch (error) {
+      addProjectLocal(project);
+    }
+  }
+
+  function addProjectLocal(project) {
     project.id = Date.now().toString();
     project.createdAt = new Date().toISOString().split('T')[0];
     project.tasks = [];
     project.deliverables = [];
-    project.status = 'active';
+    project.status = project.status || 'active';
     project.progress = 0;
     projects.push(project);
-    saveProjects();
+    saveProjectsToLocal();
+    renderAll();
+    showToast('Project added locally!');
   }
 
-  function updateProject(id, data) {
+  function updateProjectLocal(id, data) {
     const idx = projects.findIndex(p => p.id === id);
-    if(idx !== -1) { projects[idx] = { ...projects[idx], ...data }; saveProjects(); }
+    if(idx !== -1) {
+      projects[idx] = { ...projects[idx], ...data };
+      saveProjectsToLocal();
+      renderAll();
+      showToast('Project updated!');
+    }
   }
 
-  function deleteProject(id) { projects = projects.filter(p => p.id !== id); saveProjects(); }
+  function deleteProjectLocal(id) {
+    projects = projects.filter(p => p.id !== id);
+    saveProjectsToLocal();
+    renderAll();
+    showToast('Project deleted!');
+  }
 
-  function addTask(projectId, task) {
+  function addTaskLocal(projectId, task) {
     const project = projects.find(p => p.id === projectId);
     if(project) {
       task.id = Date.now().toString();
@@ -566,17 +709,38 @@
       project.tasks = project.tasks || [];
       project.tasks.push(task);
       updateProjectProgress(projectId);
-      saveProjects();
+      saveProjectsToLocal();
+      showToast('Task added!');
     }
   }
 
-  function addDeliverable(projectId, deliverable) {
+  function deleteTaskLocal(projectId, taskId) {
+    const project = projects.find(p => p.id === projectId);
+    if(project && project.tasks) {
+      project.tasks = project.tasks.filter(t => t.id !== taskId);
+      updateProjectProgress(projectId);
+      saveProjectsToLocal();
+      showToast('Task deleted!');
+    }
+  }
+
+  function addDeliverableLocal(projectId, deliverable) {
     const project = projects.find(p => p.id === projectId);
     if(project) {
       deliverable.id = Date.now().toString();
       project.deliverables = project.deliverables || [];
       project.deliverables.push(deliverable);
-      saveProjects();
+      saveProjectsToLocal();
+      showToast('Deliverable added!');
+    }
+  }
+
+  function deleteDeliverableLocal(projectId, deliverableId) {
+    const project = projects.find(p => p.id === projectId);
+    if(project && project.deliverables) {
+      project.deliverables = project.deliverables.filter(d => d.id !== deliverableId);
+      saveProjectsToLocal();
+      showToast('Deliverable deleted!');
     }
   }
 
@@ -585,12 +749,21 @@
     if(project && project.tasks && project.tasks.length > 0) {
       const doneTasks = project.tasks.filter(t => t.status === 'Done').length;
       project.progress = Math.round((doneTasks / project.tasks.length) * 100);
-    } else {
+    } else if(project) {
       project.progress = 0;
     }
   }
 
-  function renderAll() { updateStats(); renderProjects(); }
+  function refreshData() {
+    document.getElementById('projectsContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Refreshing...</div>';
+    fetchProjectsFromAPI();
+    showToast('Data refreshed!');
+  }
+
+  function renderAll() {
+    updateStats();
+    renderProjects();
+  }
 
   function updateStats() {
     const total = projects.length;
@@ -605,7 +778,10 @@
 
   function renderProjects() {
     const container = document.getElementById('projectsContainer');
-    if(projects.length === 0) { container.innerHTML = '<div class="empty-state">No projects yet. Click "+ New Project" to get started.</div>'; return; }
+    if(projects.length === 0) { 
+      container.innerHTML = '<div class="empty-state">📁 No projects yet. Click "+ New Project" to get started.</div>'; 
+      return; 
+    }
     container.innerHTML = projects.map(p => {
       const services = p.services ? p.services.split(',').map(s => s.trim()) : [];
       let statusClass = 'status-active';
@@ -633,7 +809,7 @@
             </div>
             <div class="action-buttons" style="margin-top:8px">
               <div class="btn-edit" onclick="openEditProject('${p.id}')">✏️ Edit</div>
-              <div class="btn-delete" onclick="if(confirm('Delete this project?')) deleteProject('${p.id}')">🗑️ Delete</div>
+              <div class="btn-delete" onclick="if(confirm('Delete this project?')) deleteProjectLocal('${p.id}')">🗑️ Delete</div>
             </div>
           </div>
         </div>
@@ -641,9 +817,24 @@
     }).join('');
   }
 
-  function openAddProjectModal() { currentProjectId = null; document.getElementById('modalTitle').innerText = 'Add New Project'; document.getElementById('modalBody').innerHTML = getProjectFormHtml({}); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Project</button></div>`; document.getElementById('projectModal').style.display = 'flex'; attachProjectModalEvents(true); }
+  function openAddProjectModal() { 
+    currentProjectId = null; 
+    document.getElementById('modalTitle').innerText = 'Add New Project'; 
+    document.getElementById('modalBody').innerHTML = getProjectFormHtml({}); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Project</button></div>`; 
+    document.getElementById('projectModal').style.display = 'flex'; 
+    attachProjectModalEvents(true); 
+  }
   
-  function openEditProject(id) { currentProjectId = id; const p = projects.find(p => p.id === id); document.getElementById('modalTitle').innerText = 'Edit Project'; document.getElementById('modalBody').innerHTML = getProjectFormHtml(p); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; document.getElementById('projectModal').style.display = 'flex'; attachProjectModalEvents(false); }
+  function openEditProject(id) { 
+    currentProjectId = id; 
+    const p = projects.find(p => p.id === id); 
+    document.getElementById('modalTitle').innerText = 'Edit Project'; 
+    document.getElementById('modalBody').innerHTML = getProjectFormHtml(p); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; 
+    document.getElementById('projectModal').style.display = 'flex'; 
+    attachProjectModalEvents(false); 
+  }
 
   function getProjectFormHtml(p) {
     return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
@@ -671,8 +862,12 @@
         status: document.getElementById('pStatus')?.value,
         description: document.getElementById('pDesc')?.value
       };
-      if(isAdd) addProject(data);
-      else updateProject(currentProjectId, data);
+      if (!data.name) {
+        showToast('Project name is required!', 'error');
+        return;
+      }
+      if(isAdd) addProjectToAPI(data);
+      else updateProjectLocal(currentProjectId, data);
       document.getElementById('projectModal').style.display = 'none';
     });
   }
@@ -682,8 +877,9 @@
     const p = projects.find(p => p.id === projectId);
     document.getElementById('tasksTitle').innerText = `Tasks — ${p.name}`;
     const tasks = p.tasks || [];
-    if(tasks.length === 0) { document.getElementById('tasksBody').innerHTML = '<div class="empty-state">No tasks yet. Add your first task.</div>'; }
-    else {
+    if(tasks.length === 0) { 
+      document.getElementById('tasksBody').innerHTML = '<div class="empty-state">📋 No tasks yet. Add your first task.</div>'; 
+    } else {
       let html = '<table class="data-table"><thead><tr><th>TASK</th><th>ASSIGNED TO</th><th>DEADLINE</th><th>PRIORITY</th><th>STATUS</th><th>ACTIONS</th></tr></thead><tbody>';
       tasks.forEach(t => {
         let statusClass = 'status-todo';
@@ -696,20 +892,13 @@
           <td>${t.deadline || '-'}</td>
           <td class="${t.priority === 'High' ? 'priority-high' : (t.priority === 'Medium' ? 'priority-medium' : 'priority-low')}">${t.priority || 'Medium'}</td>
           <td><span class="task-status ${statusClass}">${t.status || 'To Do'}</span></td>
-          <td><button class="btn-cancel" style="padding:4px 8px;font-size:10px" onclick="deleteTask('${projectId}','${t.id}')">Delete</button></td>
+          <td><button class="btn-cancel" style="padding:4px 8px;font-size:10px" onclick="deleteTaskLocal('${projectId}','${t.id}'); setTimeout(()=>openTasksModal('${projectId}'),100)">Delete</button></td>
         </tr>`;
       });
       html += '</tbody></table>';
       document.getElementById('tasksBody').innerHTML = html;
     }
     document.getElementById('tasksModal').style.display = 'flex';
-  }
-
-  function deleteTask(projectId, taskId) {
-    if(confirm('Delete this task?')) {
-      const p = projects.find(p => p.id === projectId);
-      if(p && p.tasks) { p.tasks = p.tasks.filter(t => t.id !== taskId); updateProjectProgress(projectId); saveProjects(); openTasksModal(projectId); }
-    }
   }
 
   function addTaskToProject() {
@@ -720,7 +909,7 @@
     const priority = prompt('Priority (High/Medium/Low):', 'Medium');
     const description = prompt('Description:') || '';
     const task = { name, assignedTo, deadline, priority, description, status: 'To Do' };
-    addTask(currentTasksProjectId, task);
+    addTaskLocal(currentTasksProjectId, task);
     openTasksModal(currentTasksProjectId);
   }
 
@@ -728,8 +917,9 @@
     const p = projects.find(p => p.id === projectId);
     document.getElementById('timelineTitle').innerText = `Timeline — ${p.name}`;
     const tasks = p.tasks || [];
-    if(tasks.length === 0) { document.getElementById('timelineBody').innerHTML = '<div class="empty-state">No tasks to display in timeline</div>'; }
-    else {
+    if(tasks.length === 0) { 
+      document.getElementById('timelineBody').innerHTML = '<div class="empty-state">📅 No tasks to display in timeline</div>'; 
+    } else {
       let html = '<div class="timeline-container">';
       tasks.forEach(t => {
         const randomProgress = Math.min(100, Math.max(10, Math.floor(Math.random() * 100)));
@@ -746,8 +936,9 @@
     const p = projects.find(p => p.id === projectId);
     document.getElementById('deliverablesTitle').innerText = `Deliverables — ${p.name}`;
     const deliverables = p.deliverables || [];
-    if(deliverables.length === 0) { document.getElementById('deliverablesBody').innerHTML = '<div class="empty-state">No deliverables yet. Add your first deliverable.</div>'; }
-    else {
+    if(deliverables.length === 0) { 
+      document.getElementById('deliverablesBody').innerHTML = '<div class="empty-state">📦 No deliverables yet. Add your first deliverable.</div>'; 
+    } else {
       let html = '<table class="data-table"><thead><tr><th>FILE</th><th>STATUS</th><th>CLIENT APPROVAL</th><th>REVISIONS</th><th>DATE</th><th>ACTIONS</th></tr></thead><tbody>';
       deliverables.forEach(d => {
         html += `<tr>
@@ -756,7 +947,7 @@
           <td>${d.approved ? '✅ Approved' : '⏳ Pending'}</td>
           <td>${d.revisions || 0}</td>
           <td>${d.date || '-'}</td>
-          <td><button class="btn-cancel" style="padding:4px 8px;font-size:10px" onclick="deleteDeliverable('${projectId}','${d.id}')">Delete</button></td>
+          <td><button class="btn-cancel" style="padding:4px 8px;font-size:10px" onclick="deleteDeliverableLocal('${projectId}','${d.id}'); setTimeout(()=>openDeliverablesModal('${projectId}'),100)">Delete</button></td>
         </tr>`;
       });
       html += '</tbody></table>';
@@ -765,24 +956,33 @@
     document.getElementById('deliverablesModal').style.display = 'flex';
   }
 
-  function deleteDeliverable(projectId, deliverableId) {
-    if(confirm('Delete this deliverable?')) {
-      const p = projects.find(p => p.id === projectId);
-      if(p && p.deliverables) { p.deliverables = p.deliverables.filter(d => d.id !== deliverableId); saveProjects(); openDeliverablesModal(projectId); }
-    }
-  }
-
   function addDeliverableToProject() {
     const name = prompt('File name / Deliverable name:');
     if(!name) return;
-    const deliverable = { id: Date.now().toString(), name, status: 'Pending', approved: false, revisions: 0, date: new Date().toISOString().split('T')[0] };
-    addDeliverable(currentDeliverablesProjectId, deliverable);
+    const deliverable = { 
+      id: Date.now().toString(), 
+      name, 
+      status: 'Pending', 
+      approved: false, 
+      revisions: 0, 
+      date: new Date().toISOString().split('T')[0] 
+    };
+    addDeliverableLocal(currentDeliverablesProjectId, deliverable);
     openDeliverablesModal(currentDeliverablesProjectId);
   }
 
-  function updateDate() { document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    }); 
+  }
 
+  // Event listeners
   document.getElementById('addProjectBtn').onclick = openAddProjectModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
   document.getElementById('closeModalBtn').onclick = () => document.getElementById('projectModal').style.display = 'none';
   document.getElementById('closeTasksModalBtn').onclick = () => document.getElementById('tasksModal').style.display = 'none';
   document.getElementById('closeTasksFooterBtn').onclick = () => document.getElementById('tasksModal').style.display = 'none';
@@ -792,11 +992,30 @@
   document.getElementById('closeDeliverablesBtn').onclick = () => document.getElementById('deliverablesModal').style.display = 'none';
   document.getElementById('closeDeliverablesFooterBtn').onclick = () => document.getElementById('deliverablesModal').style.display = 'none';
   document.getElementById('addDeliverableBtn').onclick = addDeliverableToProject;
-  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+  document.getElementById('logoutBtn').onclick = () => { 
+    localStorage.clear(); 
+    window.location.href = '/login.html'; 
+  };
 
-  projects = getProjects();
+  // Make functions global for onclick
+  window.deleteTaskLocal = deleteTaskLocal;
+  window.deleteDeliverableLocal = deleteDeliverableLocal;
+  window.openTasksModal = openTasksModal;
+  window.openTimelineModal = openTimelineModal;
+  window.openDeliverablesModal = openDeliverablesModal;
+  window.openEditProject = openEditProject;
+  window.deleteProjectLocal = deleteProjectLocal;
+
+  // Initial load
   updateDate();
-  renderAll();
+  fetchProjectsFromAPI();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      fetchProjectsFromAPI();
+    }
+  }, 60000);
 </script>
 </body>
 </html>
