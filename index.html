@@ -62,7 +62,6 @@
     .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
     .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
 
-    /* Sidebar */
     .sidebar {
       position: fixed;
       left: 0;
@@ -139,7 +138,6 @@
     }
     .logout-btn:hover { background: rgba(239,68,68,0.2); }
 
-    /* Main content */
     .main-content {
       margin-left: 260px;
       padding: 24px 32px;
@@ -147,7 +145,6 @@
       z-index: 1;
     }
 
-    /* Header */
     .top-header {
       display: flex;
       justify-content: space-between;
@@ -170,7 +167,6 @@
       margin-top: 6px;
     }
 
-    /* Profile Button - Small */
     .profile-btn {
       display: flex;
       align-items: center;
@@ -214,7 +210,6 @@
       color: var(--text-muted);
     }
 
-    /* Dashboard Grid - 2x2 */
     .dashboard-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -383,14 +378,12 @@
   <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
   <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
   
-  <!-- NOUVEAUX LIENS POUR NOUVELLES PAGES -->
   <div class="nav-section">PORTAL</div>
   <a href="/page/client-portal.html" class="nav-item"><i>🏢</i> <span>Client Portal</span></a>
   <a href="/page/kanban.html" class="nav-item"><i>🎯</i> <span>Kanban Board</span></a>
   <a href="/page/gantt.html" class="nav-item"><i>📊</i> <span>Gantt Chart</span></a>
   <a href="/page/talent-marketplace.html" class="nav-item"><i>🌟</i> <span>Talent Pool</span></a>
   
-  <!-- section pour les paramètres -->
   <div class="nav-section">SYSTEM</div>
   <a href="/profile.html" class="nav-item"><i>👤</i> <span>My Profile</span></a>
   <a href="/settings.html" class="nav-item"><i>⚙️</i> <span>Settings</span></a>
@@ -541,28 +534,38 @@
 
   async function loadDashboardData() {
     try {
-      const response = await fetch('/api/dashboard');
+      const token = localStorage.getItem('niche_token');
+      const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+      
+      const response = await fetch('/api/dashboard', { headers });
       if(response.ok) {
         const data = await response.json();
         document.getElementById('todayCalls').innerText = data.todayCalls || 0;
         document.getElementById('todayMeetings').innerText = data.todayMeetings || 0;
         document.getElementById('todayDeals').innerText = data.todayDeals || 0;
-        document.getElementById('todayRevenue').innerText = '$' + (data.todayRevenue || 0);
+        document.getElementById('todayRevenue').innerText = '$' + (data.todayRevenue || 0).toLocaleString();
         document.getElementById('callsProgress').style.width = ((data.todayCalls||0)/1500*100)+'%';
-        document.getElementById('pipelineTotal').innerText = '$' + (data.pipelineTotal || 0);
-        document.getElementById('pipelineMonth').innerText = '$' + (data.pipelineMonth || 0);
-        document.getElementById('pipelineAtRisk').innerText = '$' + (data.pipelineAtRisk || 0);
+        document.getElementById('pipelineTotal').innerText = '$' + (data.pipelineTotal || 0).toLocaleString();
+        document.getElementById('pipelineMonth').innerText = '$' + (data.pipelineMonth || 0).toLocaleString();
+        document.getElementById('pipelineAtRisk').innerText = '$' + (data.pipelineAtRisk || 0).toLocaleString();
         document.getElementById('topPerformer').innerText = data.topPerformer || '—';
         document.getElementById('needsAttention').innerText = data.needsAttention || '—';
-        document.getElementById('financeMRR').innerText = '$' + (data.mrr || 0);
-        document.getElementById('financeExpenses').innerText = '$' + (data.expenses || 0);
-        document.getElementById('financeNetProfit').innerText = '$' + (data.netProfit || 0);
+        document.getElementById('financeMRR').innerText = '$' + (data.mrr || 0).toLocaleString();
+        document.getElementById('financeExpenses').innerText = '$' + (data.expenses || 0).toLocaleString();
+        document.getElementById('financeNetProfit').innerText = '$' + (data.netProfit || 0).toLocaleString();
       }
     } catch(e) { 
       console.error('API error:', e); 
       setAllValuesToZero(); 
     }
   }
+
+  // Rafraîchir les données toutes les 30 secondes
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      loadDashboardData();
+    }
+  }, 30000);
 
   document.getElementById('profileBtn').addEventListener('click', () => {
     window.location.href = '/profile.html';
