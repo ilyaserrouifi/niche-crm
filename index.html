@@ -62,6 +62,7 @@
     .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
     .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
 
+    /* Sidebar */
     .sidebar {
       position: fixed;
       left: 0;
@@ -138,6 +139,7 @@
     }
     .logout-btn:hover { background: rgba(239,68,68,0.2); }
 
+    /* Main content */
     .main-content {
       margin-left: 260px;
       padding: 24px 32px;
@@ -145,6 +147,7 @@
       z-index: 1;
     }
 
+    /* Header */
     .top-header {
       display: flex;
       justify-content: space-between;
@@ -152,6 +155,8 @@
       margin-bottom: 28px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+      gap: 16px;
     }
     .page-title h1 {
       font-size: 28px;
@@ -166,13 +171,28 @@
       color: var(--text-muted);
       margin-top: 6px;
     }
-
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 8px;
+      padding: 8px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 12px;
+      transition: var(--transition);
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
     .profile-btn {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
       cursor: pointer;
-      padding: 4px 8px 4px 4px;
+      padding: 6px 12px 6px 6px;
       border-radius: 40px;
       background: rgba(255,255,255,0.03);
       transition: var(--transition);
@@ -183,15 +203,15 @@
       border-color: rgba(43,47,255,0.3);
     }
     .profile-avatar {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       background: linear-gradient(135deg, var(--blue-primary), #7c3aed);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 600;
-      font-size: 13px;
+      font-size: 14px;
       color: white;
       overflow: hidden;
     }
@@ -210,6 +230,7 @@
       color: var(--text-muted);
     }
 
+    /* Dashboard Grid */
     .dashboard-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -222,7 +243,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 24px;
       overflow: hidden;
+      transition: var(--transition);
     }
+    .card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
     .card-header {
       padding: 18px 24px;
       border-bottom: 1px solid var(--border-subtle);
@@ -302,6 +325,7 @@
     .finance-value.positive { color: var(--success-green); }
     .finance-value.negative { color: var(--error-red); }
 
+    /* Charts Grid */
     .charts-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -314,7 +338,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 24px;
       overflow: hidden;
+      transition: var(--transition);
     }
+    .chart-card:hover { border-color: rgba(43,47,255,0.2); }
     .chart-container {
       height: 280px;
       padding: 16px;
@@ -322,6 +348,7 @@
     }
     canvas { max-height: 250px; width: 100%; }
 
+    /* Map Card */
     .map-card {
       background: var(--surface-card);
       backdrop-filter: blur(10px);
@@ -337,6 +364,45 @@
     #leadsMap {
       height: 100%;
       width: 100%;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #10b981;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 1100;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2000;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(43,47,255,0.2);
+      border-top-color: #2b2fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
 
     @media (max-width: 900px) {
@@ -362,28 +428,34 @@
     <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
   </div>
   
+  <!-- MAIN SECTION -->
   <div class="nav-section">MAIN</div>
   <a href="/index.html" class="nav-item active"><i>📊</i> <span>Dashboard</span></a>
-  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Pipeline</span></a>
+  <a href="/page/kanban.html" class="nav-item"><i>🎯</i> <span>Kanban Board</span></a>
+  <a href="/page/gantt.html" class="nav-item"><i>📅</i> <span>Gantt Chart</span></a>
   
+  <!-- PEOPLE SECTION -->
   <div class="nav-section">PEOPLE</div>
   <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
   <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
   <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
   <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  <a href="/page/staffing.html" class="nav-item"><i>🌟</i> <span>Talent Marketplace</span></a>
   
+  <!-- WORK SECTION -->
   <div class="nav-section">WORK</div>
   <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
   <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
   <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
   <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  <a href="/page/reports.html" class="nav-item"><i>📋</i> <span>Reports</span></a>
   
+  <!-- PORTAL SECTION -->
   <div class="nav-section">PORTAL</div>
+  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Sales Pipeline</span></a>
   <a href="/page/client-portal.html" class="nav-item"><i>🏢</i> <span>Client Portal</span></a>
-  <a href="/page/kanban.html" class="nav-item"><i>🎯</i> <span>Kanban Board</span></a>
-  <a href="/page/gantt.html" class="nav-item"><i>📊</i> <span>Gantt Chart</span></a>
-  <a href="/page/talent-marketplace.html" class="nav-item"><i>🌟</i> <span>Talent Pool</span></a>
   
+  <!-- SYSTEM SECTION -->
   <div class="nav-section">SYSTEM</div>
   <a href="/profile.html" class="nav-item"><i>👤</i> <span>My Profile</span></a>
   <a href="/settings.html" class="nav-item"><i>⚙️</i> <span>Settings</span></a>
@@ -397,62 +469,120 @@
       <h1>Dashboard</h1>
       <div class="page-date" id="currentDate"></div>
     </div>
-    <div class="profile-btn" id="profileBtn">
-      <div class="profile-avatar" id="profileAvatar">A</div>
-      <div class="profile-info">
-        <div class="profile-name" id="profileName">Admin</div>
-        <div class="profile-role" id="profileRole">Admin</div>
+    <div class="header-actions">
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <div class="profile-btn" id="profileBtn">
+        <div class="profile-avatar" id="profileAvatar">A</div>
+        <div class="profile-info">
+          <div class="profile-name" id="profileName">Admin</div>
+          <div class="profile-role" id="profileRole">Admin</div>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- TODAY'S NUMBERS & PIPELINE VALUE -->
   <div class="dashboard-grid">
-    <div class="card"><div class="card-header"><h3>📊 TODAY'S NUMBERS</h3></div><div class="card-body">
-      <div class="stat-row"><span class="stat-label">Calls Made</span><span class="stat-value"><span id="todayCalls">0</span> / 1,500</span></div>
-      <div class="progress-bar"><div class="progress-fill" id="callsProgress" style="width:0%"></div></div>
-      <div class="stat-row"><span class="stat-label">Meetings Booked</span><span class="stat-value"><span id="todayMeetings">0</span> / 30</span></div>
-      <div class="stat-row"><span class="stat-label">Deals Closed</span><span class="stat-value"><span id="todayDeals">0</span> / 6</span></div>
-      <div class="stat-row"><span class="stat-label">Revenue Today</span><span class="stat-value highlight" id="todayRevenue">$0</span></div>
-    </div></div>
+    <div class="card">
+      <div class="card-header"><h3>📊 TODAY'S NUMBERS</h3></div>
+      <div class="card-body">
+        <div class="stat-row"><span class="stat-label">📞 Calls Made</span><span class="stat-value"><span id="todayCalls">0</span> / 1,500</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="callsProgress" style="width:0%"></div></div>
+        <div class="stat-row"><span class="stat-label">🤝 Meetings Booked</span><span class="stat-value"><span id="todayMeetings">0</span> / 30</span></div>
+        <div class="stat-row"><span class="stat-label">✅ Deals Closed</span><span class="stat-value"><span id="todayDeals">0</span> / 6</span></div>
+        <div class="stat-row"><span class="stat-label">💰 Revenue Today</span><span class="stat-value highlight" id="todayRevenue">$0</span></div>
+      </div>
+    </div>
 
-    <div class="card"><div class="card-header"><h3>📈 PIPELINE VALUE</h3></div><div class="card-body">
-      <div class="stat-row"><span class="stat-label">Total Pipeline</span><span class="stat-value" id="pipelineTotal">$0</span></div>
-      <div class="stat-row"><span class="stat-label">This Month</span><span class="stat-value" id="pipelineMonth">$0</span></div>
-      <div class="stat-row"><span class="stat-label">At Risk</span><span class="stat-value warning" id="pipelineAtRisk">$0</span></div>
-    </div></div>
+    <div class="card">
+      <div class="card-header"><h3>📈 PIPELINE VALUE</h3></div>
+      <div class="card-body">
+        <div class="stat-row"><span class="stat-label">Total Pipeline</span><span class="stat-value" id="pipelineTotal">$0</span></div>
+        <div class="stat-row"><span class="stat-label">This Month</span><span class="stat-value" id="pipelineMonth">$0</span></div>
+        <div class="stat-row"><span class="stat-label">At Risk</span><span class="stat-value warning" id="pipelineAtRisk">$0</span></div>
+      </div>
+    </div>
 
-    <div class="card"><div class="card-header"><h3>🏆 TEAM PERFORMANCE</h3></div><div class="card-body">
-      <div class="team-item"><span class="team-name">Top Performer</span><span class="team-value" id="topPerformer">—</span></div>
-      <div class="team-item"><span class="team-name">Needs Attention</span><span class="team-value warning" id="needsAttention">—</span></div>
-    </div></div>
+    <div class="card">
+      <div class="card-header"><h3>🏆 TEAM PERFORMANCE</h3></div>
+      <div class="card-body">
+        <div class="team-item"><span class="team-name">⭐ Top Performer</span><span class="team-value" id="topPerformer">—</span></div>
+        <div class="team-item"><span class="team-name">⚠️ Needs Attention</span><span class="team-value warning" id="needsAttention">—</span></div>
+        <div class="team-item"><span class="team-name">📊 Avg Performance</span><span class="team-value" id="avgPerformance">B+</span></div>
+      </div>
+    </div>
 
-    <div class="card"><div class="card-header"><h3>💰 FINANCE SNAPSHOT</h3></div><div class="card-body">
-      <div class="finance-row"><span class="finance-label">MRR</span><span class="finance-value" id="financeMRR">$0</span></div>
-      <div class="finance-row"><span class="finance-label">Expenses</span><span class="finance-value negative" id="financeExpenses">$0</span></div>
-      <div class="finance-row"><span class="finance-label">Net Profit</span><span class="finance-value positive" id="financeNetProfit">$0</span></div>
-    </div></div>
+    <div class="card">
+      <div class="card-header"><h3>💰 FINANCE SNAPSHOT</h3></div>
+      <div class="card-body">
+        <div class="finance-row"><span class="finance-label">MRR</span><span class="finance-value" id="financeMRR">$0</span></div>
+        <div class="finance-row"><span class="finance-label">Expenses</span><span class="finance-value negative" id="financeExpenses">$0</span></div>
+        <div class="finance-row"><span class="finance-label">Net Profit</span><span class="finance-value positive" id="financeNetProfit">$0</span></div>
+        <div class="finance-row"><span class="finance-label">Profit Margin</span><span class="finance-value positive" id="profitMargin">0%</span></div>
+      </div>
+    </div>
   </div>
 
+  <!-- CHARTS SECTION -->
   <div class="charts-grid">
-    <div class="chart-card"><div class="card-header"><h3>📈 REVENUE TREND (30 DAYS)</h3></div><div class="chart-container"><canvas id="revenueTrendChart"></canvas></div></div>
-    <div class="chart-card"><div class="card-header"><h3>📞 CALLS/DAY (7 DAYS)</h3></div><div class="chart-container"><canvas id="callsTrendChart"></canvas></div></div>
-    <div class="chart-card"><div class="card-header"><h3>🎯 CONVERSION FUNNEL</h3></div><div class="chart-container"><canvas id="funnelChart"></canvas></div></div>
-    <div class="chart-card"><div class="card-header"><h3>📊 MRR GROWTH (MONTHLY)</h3></div><div class="chart-container"><canvas id="mrrGrowthChart"></canvas></div></div>
+    <div class="chart-card">
+      <div class="card-header"><h3>📈 REVENUE TREND (30 DAYS)</h3></div>
+      <div class="chart-container"><canvas id="revenueTrendChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><h3>📞 CALLS & MEETINGS (7 DAYS)</h3></div>
+      <div class="chart-container"><canvas id="callsTrendChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><h3>🎯 CONVERSION FUNNEL</h3></div>
+      <div class="chart-container"><canvas id="funnelChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><h3>📊 MRR GROWTH (MONTHLY)</h3></div>
+      <div class="chart-container"><canvas id="mrrGrowthChart"></canvas></div>
+    </div>
   </div>
 
+  <!-- MAP SECTION -->
   <div class="map-card">
     <div class="card-header"><h3>🌍 LEADS BY REGION</h3></div>
     <div class="map-container"><div id="leadsMap"></div></div>
-    <div class="card-body" style="padding-top:12px; text-align:center; font-size:12px; color:var(--text-muted)">📍 Click markers to see lead details — Live data from database</div>
+    <div class="card-body" style="padding-top:12px; text-align:center; font-size:12px; color:var(--text-muted)">
+      📍 Click markers to see lead details — Live data from database
+    </div>
   </div>
 </div>
 
 <script>
-  let map;
+  // ============================================================
+  // NICHE CRM DASHBOARD - COMPLETE WITH REAL API
+  // ============================================================
+  
   let revenueChart, callsChart, funnelChart, mrrChart;
+  let map;
+  let markers = [];
 
-  // Date
-  document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  // Check authentication
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function updateDate() {
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  }
 
   // Load user info with avatar support
   function loadUserInfo() {
@@ -462,10 +592,9 @@
     const avatarInitials = name.charAt(0).toUpperCase();
     
     document.getElementById('profileName').innerText = name;
-    document.getElementById('profileRole').innerText = role === 'admin' ? 'Admin' : (role === 'client' ? 'Client' : 'User');
+    document.getElementById('profileRole').innerText = role === 'admin' ? 'Administrator' : (role === 'client' ? 'Client' : 'User');
     
     const avatarElement = document.getElementById('profileAvatar');
-    
     if (avatarUrl && avatarUrl !== 'null' && avatarUrl !== '') {
       avatarElement.style.background = 'none';
       avatarElement.style.overflow = 'hidden';
@@ -476,52 +605,121 @@
     }
   }
 
-  function setAllValuesToZero() {
-    document.getElementById('todayCalls').innerText = '0';
-    document.getElementById('todayMeetings').innerText = '0';
-    document.getElementById('todayDeals').innerText = '0';
-    document.getElementById('todayRevenue').innerText = '$0';
-    document.getElementById('callsProgress').style.width = '0%';
-    document.getElementById('pipelineTotal').innerText = '$0';
-    document.getElementById('pipelineMonth').innerText = '$0';
-    document.getElementById('pipelineAtRisk').innerText = '$0';
-    document.getElementById('topPerformer').innerText = '—';
-    document.getElementById('needsAttention').innerText = '—';
-    document.getElementById('financeMRR').innerText = '$0';
-    document.getElementById('financeExpenses').innerText = '$0';
-    document.getElementById('financeNetProfit').innerText = '$0';
-  }
-
+  // Initialize all charts
   function initCharts() {
     const ctxRevenue = document.getElementById('revenueTrendChart').getContext('2d');
     revenueChart = new Chart(ctxRevenue, {
       type: 'line',
-      data: { labels: Array.from({length:30}, (_,i) => `Day ${i+1}`), datasets: [{ label: 'Revenue ($)', data: Array(30).fill(0), borderColor: '#2b2fff', backgroundColor: 'rgba(43,47,255,0.1)', tension: 0.4, fill: true }] },
-      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color: '#a0aec0' } } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0', maxRotation: 45, autoSkip: true, maxTicksLimit: 6 } } } }
+      data: { 
+        labels: Array.from({length:30}, (_,i) => `Day ${i+1}`), 
+        datasets: [{ 
+          label: 'Revenue ($)', 
+          data: Array(30).fill(0), 
+          borderColor: '#2b2fff', 
+          backgroundColor: 'rgba(43,47,255,0.1)', 
+          tension: 0.4, 
+          fill: true,
+          pointBackgroundColor: '#2b2fff',
+          pointRadius: 3,
+          pointHoverRadius: 6
+        }] 
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: true, 
+        plugins: { 
+          legend: { labels: { color: '#a0aec0' } },
+          tooltip: { backgroundColor: '#1a1f2e', titleColor: '#fff', bodyColor: '#a0aec0' }
+        }, 
+        scales: { 
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a0aec0', callback: v => '$' + v.toLocaleString() } }, 
+          x: { ticks: { color: '#a0aec0', maxRotation: 45, autoSkip: true, maxTicksLimit: 6 } } 
+        } 
+      }
     });
 
     const ctxCalls = document.getElementById('callsTrendChart').getContext('2d');
     callsChart = new Chart(ctxCalls, {
       type: 'bar',
-      data: { labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], datasets: [{ label: 'Calls', data: [0,0,0,0,0,0,0], backgroundColor: '#2b2fff', borderRadius: 6 }, { label: 'Meetings', data: [0,0,0,0,0,0,0], backgroundColor: '#8b5cf6', borderRadius: 6 }] },
-      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color: '#a0aec0' } } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0' } } } }
+      data: { 
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], 
+        datasets: [
+          { label: 'Calls', data: [0,0,0,0,0,0,0], backgroundColor: '#2b2fff', borderRadius: 6 },
+          { label: 'Meetings', data: [0,0,0,0,0,0,0], backgroundColor: '#8b5cf6', borderRadius: 6 }
+        ] 
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: true, 
+        plugins: { 
+          legend: { labels: { color: '#a0aec0' } },
+          tooltip: { backgroundColor: '#1a1f2e' }
+        }, 
+        scales: { 
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a0aec0' } }, 
+          x: { ticks: { color: '#a0aec0' } } 
+        } 
+      }
     });
 
     const ctxFunnel = document.getElementById('funnelChart').getContext('2d');
     funnelChart = new Chart(ctxFunnel, {
       type: 'bar',
-      data: { labels: ['LEAD', 'CONTACTED', 'MEETING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATING', 'WON'], datasets: [{ label: 'Count', data: [0,0,0,0,0,0,0], backgroundColor: ['#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#f97316', '#10b981'], borderRadius: 6 }] },
-      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color: '#a0aec0' } } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0', rotation: 45 } } } }
+      data: { 
+        labels: ['LEAD', 'CONTACTED', 'MEETING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATING', 'WON'], 
+        datasets: [{ 
+          label: 'Count', 
+          data: [0,0,0,0,0,0,0], 
+          backgroundColor: ['#6366f1', '#3b82f6', '#06b6d4', '#10b981', '#f59e0b', '#f97316', '#10b981'], 
+          borderRadius: 6 
+        }] 
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: true, 
+        plugins: { 
+          legend: { labels: { color: '#a0aec0' } },
+          tooltip: { backgroundColor: '#1a1f2e' }
+        }, 
+        scales: { 
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a0aec0' } }, 
+          x: { ticks: { color: '#a0aec0', rotation: 45 } } 
+        } 
+      }
     });
 
     const ctxMRR = document.getElementById('mrrGrowthChart').getContext('2d');
     mrrChart = new Chart(ctxMRR, {
       type: 'line',
-      data: { labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], datasets: [{ label: 'MRR ($)', data: Array(12).fill(0), borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.1)', tension: 0.4, fill: true }] },
-      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { labels: { color: '#a0aec0' } } }, scales: { y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a0aec0' } }, x: { ticks: { color: '#a0aec0' } } } }
+      data: { 
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], 
+        datasets: [{ 
+          label: 'MRR ($)', 
+          data: Array(12).fill(0), 
+          borderColor: '#fbbf24', 
+          backgroundColor: 'rgba(251,191,36,0.1)', 
+          tension: 0.4, 
+          fill: true,
+          pointBackgroundColor: '#fbbf24',
+          pointRadius: 4
+        }] 
+      },
+      options: { 
+        responsive: true, 
+        maintainAspectRatio: true, 
+        plugins: { 
+          legend: { labels: { color: '#a0aec0' } },
+          tooltip: { backgroundColor: '#1a1f2e', callbacks: { label: ctx => 'MRR: $' + ctx.raw.toLocaleString() } }
+        }, 
+        scales: { 
+          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a0aec0', callback: v => '$' + v.toLocaleString() } }, 
+          x: { ticks: { color: '#a0aec0' } } 
+        } 
+      }
     });
   }
 
+  // Initialize map
   function initMap() {
     map = L.map('leadsMap').setView([20, 10], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
@@ -532,58 +730,166 @@
     }).addTo(map);
   }
 
+  // Update map with leads data
+  function updateMap(leads) {
+    if (!map) return;
+    markers.forEach(marker => map.removeLayer(marker));
+    markers = [];
+    
+    leads.forEach(lead => {
+      if (lead.lat && lead.lng) {
+        const marker = L.marker([lead.lat, lead.lng]).addTo(map);
+        marker.bindPopup(`
+          <div style="font-family: 'DM Sans', sans-serif;">
+            <strong>${escapeHtml(lead.company)}</strong><br/>
+            Contact: ${escapeHtml(lead.contact)}<br/>
+            Value: $${(lead.value || 0).toLocaleString()}<br/>
+            Stage: ${lead.stage || 'Lead'}<br/>
+            <a href="/page/pipeline.html" style="color:#2b2fff;">View Details →</a>
+          </div>
+        `);
+        markers.push(marker);
+      }
+    });
+  }
+
+  // Load all dashboard data from API
   async function loadDashboardData() {
     try {
       const token = localStorage.getItem('niche_token');
-      const headers = token ? { "Authorization": `Bearer ${token}` } : {};
+      const headers = { "Authorization": `Bearer ${token}` };
       
-      const response = await fetch('/api/dashboard', { headers });
-      if(response.ok) {
-        const data = await response.json();
-        document.getElementById('todayCalls').innerText = data.todayCalls || 0;
-        document.getElementById('todayMeetings').innerText = data.todayMeetings || 0;
-        document.getElementById('todayDeals').innerText = data.todayDeals || 0;
-        document.getElementById('todayRevenue').innerText = '$' + (data.todayRevenue || 0).toLocaleString();
-        document.getElementById('callsProgress').style.width = ((data.todayCalls||0)/1500*100)+'%';
-        document.getElementById('pipelineTotal').innerText = '$' + (data.pipelineTotal || 0).toLocaleString();
-        document.getElementById('pipelineMonth').innerText = '$' + (data.pipelineMonth || 0).toLocaleString();
-        document.getElementById('pipelineAtRisk').innerText = '$' + (data.pipelineAtRisk || 0).toLocaleString();
-        document.getElementById('topPerformer').innerText = data.topPerformer || '—';
-        document.getElementById('needsAttention').innerText = data.needsAttention || '—';
-        document.getElementById('financeMRR').innerText = '$' + (data.mrr || 0).toLocaleString();
-        document.getElementById('financeExpenses').innerText = '$' + (data.expenses || 0).toLocaleString();
-        document.getElementById('financeNetProfit').innerText = '$' + (data.netProfit || 0).toLocaleString();
+      // Fetch dashboard stats
+      const statsRes = await fetch('/api/dashboard/stats', { headers });
+      if (statsRes.ok) {
+        const stats = await statsRes.json();
+        document.getElementById('todayCalls').innerText = stats.todayCalls || 0;
+        document.getElementById('todayMeetings').innerText = stats.todayMeetings || 0;
+        document.getElementById('todayDeals').innerText = stats.todayDeals || 0;
+        document.getElementById('todayRevenue').innerText = '$' + (stats.todayRevenue || 0).toLocaleString();
+        document.getElementById('callsProgress').style.width = Math.min(100, ((stats.todayCalls || 0) / 1500 * 100)) + '%';
+        document.getElementById('pipelineTotal').innerText = '$' + (stats.pipelineTotal || 0).toLocaleString();
+        document.getElementById('pipelineMonth').innerText = '$' + (stats.pipelineMonth || 0).toLocaleString();
+        document.getElementById('pipelineAtRisk').innerText = '$' + (stats.pipelineAtRisk || 0).toLocaleString();
+        document.getElementById('topPerformer').innerText = stats.topPerformer || '—';
+        document.getElementById('needsAttention').innerText = stats.needsAttention || '—';
+        document.getElementById('financeMRR').innerText = '$' + (stats.mrr || 0).toLocaleString();
+        document.getElementById('financeExpenses').innerText = '$' + (stats.expenses || 0).toLocaleString();
+        document.getElementById('financeNetProfit').innerText = '$' + (stats.netProfit || 0).toLocaleString();
+        document.getElementById('profitMargin').innerText = (stats.profitMargin || 0) + '%';
       }
-    } catch(e) { 
-      console.error('API error:', e); 
-      setAllValuesToZero(); 
+      
+      // Fetch revenue trend
+      const revenueRes = await fetch('/api/analytics/revenue-trend', { headers });
+      if (revenueRes.ok) {
+        const revenueData = await revenueRes.json();
+        if (revenueChart && revenueData.length === 30) {
+          revenueChart.data.datasets[0].data = revenueData;
+          revenueChart.update();
+        }
+      }
+      
+      // Fetch calls trend
+      const callsRes = await fetch('/api/analytics/calls-trend', { headers });
+      if (callsRes.ok) {
+        const callsData = await callsRes.json();
+        if (callsChart && callsData.calls && callsData.calls.length === 7) {
+          callsChart.data.datasets[0].data = callsData.calls;
+          callsChart.data.datasets[1].data = callsData.meetings || [];
+          callsChart.update();
+        }
+      }
+      
+      // Fetch funnel data
+      const funnelRes = await fetch('/api/analytics/conversion-funnel', { headers });
+      if (funnelRes.ok) {
+        const funnelData = await funnelRes.json();
+        if (funnelChart && funnelData.length === 7) {
+          funnelChart.data.datasets[0].data = funnelData;
+          funnelChart.update();
+        }
+      }
+      
+      // Fetch MRR data
+      const mrrRes = await fetch('/api/analytics/mrr-trend', { headers });
+      if (mrrRes.ok) {
+        const mrrData = await mrrRes.json();
+        if (mrrChart && mrrData.length === 12) {
+          mrrChart.data.datasets[0].data = mrrData;
+          mrrChart.update();
+        }
+      }
+      
+      // Fetch leads for map
+      const leadsRes = await fetch('/api/leads/geo', { headers });
+      if (leadsRes.ok) {
+        const leads = await leadsRes.json();
+        updateMap(leads);
+      }
+      
+    } catch (error) {
+      console.error('API error:', error);
+      // Set default values if API fails
+      setDefaultValues();
     }
   }
+  
+  function setDefaultValues() {
+    document.getElementById('todayCalls').innerText = '0';
+    document.getElementById('todayMeetings').innerText = '0';
+    document.getElementById('todayDeals').innerText = '0';
+    document.getElementById('todayRevenue').innerText = '$0';
+    document.getElementById('pipelineTotal').innerText = '$0';
+    document.getElementById('pipelineMonth').innerText = '$0';
+    document.getElementById('pipelineAtRisk').innerText = '$0';
+    document.getElementById('topPerformer').innerText = '—';
+    document.getElementById('needsAttention').innerText = '—';
+    document.getElementById('financeMRR').innerText = '$0';
+    document.getElementById('financeExpenses').innerText = '$0';
+    document.getElementById('financeNetProfit').innerText = '$0';
+    document.getElementById('profitMargin').innerText = '0%';
+  }
 
-  // Rafraîchir les données toutes les 30 secondes
-  setInterval(() => {
-    if (localStorage.getItem('niche_token')) {
-      loadDashboardData();
-    }
-  }, 30000);
+  function refreshData() {
+    showToast('Refreshing dashboard data...');
+    loadDashboardData();
+  }
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  // Event listeners
   document.getElementById('profileBtn').addEventListener('click', () => {
     window.location.href = '/profile.html';
   });
-
+  
+  document.getElementById('refreshBtn').addEventListener('click', refreshData);
+  
   document.getElementById('logoutBtn').addEventListener('click', () => { 
     localStorage.clear(); 
     window.location.href = '/login.html';
   });
 
-  if (!localStorage.getItem('niche_token')) {
-    window.location.href = '/login.html';
-  } else {
-    loadUserInfo();
-    initCharts();
-    initMap();
-    loadDashboardData();
-  }
+  // Initialize
+  updateDate();
+  loadUserInfo();
+  initCharts();
+  initMap();
+  loadDashboardData();
+  
+  // Auto-refresh every 30 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      loadDashboardData();
+    }
+  }, 30000);
 </script>
 </body>
 </html>
