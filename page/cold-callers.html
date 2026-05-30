@@ -88,10 +88,13 @@
     .page-date { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
     .btn-add { background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; border-radius: 8px; padding: 10px 20px; color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
     .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn { background: rgba(43,47,255,0.15); border: 1px solid rgba(43,47,255,0.3); border-radius: 30px; padding: 8px 16px; color: var(--blue-primary); cursor: pointer; font-size: 12px; margin-left: 10px; }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
 
     /* Stats row */
     .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-    .stat-card { background: var(--surface-card); backdrop-filter: blur(10px); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 20px; }
+    .stat-card { background: var(--surface-card); backdrop-filter: blur(10px); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 20px; transition: var(--transition); }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
     .stat-value { font-size: 32px; font-weight: 700; }
     .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
     .color-violet { color: #818cf8; }
@@ -101,7 +104,8 @@
 
     /* Callers grid */
     .callers-grid { display: flex; flex-direction: column; gap: 20px; }
-    .caller-card { background: var(--surface-card); backdrop-filter: blur(10px); border: 1px solid var(--border-subtle); border-radius: 20px; overflow: hidden; }
+    .caller-card { background: var(--surface-card); backdrop-filter: blur(10px); border: 1px solid var(--border-subtle); border-radius: 20px; overflow: hidden; transition: var(--transition); }
+    .caller-card:hover { transform: translateX(4px); border-color: rgba(43,47,255,0.3); }
     .card-header { background: rgba(43,47,255,0.1); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); }
     .card-header h3 { font-size: 18px; font-weight: 600; color: white; }
     .score-badge { padding: 6px 14px; border-radius: 30px; font-size: 14px; font-weight: 700; }
@@ -115,7 +119,8 @@
     .info-item .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
     .info-item .value { font-size: 14px; font-weight: 500; color: white; margin-top: 4px; }
     .kpis-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
-    .kpi-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; text-align: center; }
+    .kpi-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; text-align: center; transition: var(--transition); }
+    .kpi-card:hover { background: rgba(255,255,255,0.06); transform: scale(1.02); }
     .kpi-number { font-size: 22px; font-weight: 700; }
     .kpi-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
     .kpi-target { font-size: 9px; color: #4b5563; margin-top: 2px; }
@@ -129,6 +134,16 @@
     }
     .btn-call-log:hover, .btn-add-call:hover, .btn-edit:hover { background: rgba(43,47,255,0.15); color: white; }
     .btn-delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    /* Loading spinner */
+    .loading-spinner { text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(43,47,255,0.2); border-top-color: #2b2fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast notification */
+    .toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 1100; animation: slideIn 0.3s ease; }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
     /* Modal */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
@@ -191,8 +206,14 @@
 
 <div class="main-content">
   <div class="top-header">
-    <div class="page-title"><h1>Cold Callers</h1><div class="page-date" id="currentDate"></div></div>
-    <button class="btn-add" id="addCallerBtn">+ Add Caller</button>
+    <div class="page-title">
+      <h1>Cold Callers</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div>
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addCallerBtn">+ Add Caller</button>
+    </div>
   </div>
 
   <div class="stats-row">
@@ -202,7 +223,9 @@
     <div class="stat-card"><div class="stat-value color-emerald" id="totalMeetings">0</div><div class="stat-label">MEETINGS BOOKED</div></div>
   </div>
 
-  <div id="callersContainer" class="callers-grid"></div>
+  <div id="callersContainer" class="callers-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading callers...</div>
+  </div>
 </div>
 
 <!-- Modal Add/Edit Caller -->
@@ -216,7 +239,7 @@
 
 <!-- Modal Call Log -->
 <div id="callLogModal" class="modal-overlay">
-  <div class="modal" style="width: 800px;">
+  <div class="modal" style="width: 900px;">
     <div class="modal-header"><h3 id="callLogTitle">Call Log</h3><button class="modal-close" id="closeLogModalBtn">✕</button></div>
     <div id="callLogBody"></div>
     <div class="modal-footer"><button class="btn-cancel" id="closeLogFooterBtn">Close</button></div>
@@ -224,16 +247,39 @@
 </div>
 
 <script>
+  // ============================================================
+  // COLD CALLERS MANAGEMENT - COMPLETE WITH REAL API
+  // ============================================================
+  
   // Check authentication
   if (!localStorage.getItem('niche_token')) {
     window.location.href = '/login.html';
   }
-
+  
   let callers = [];
   let currentCallerId = null;
-
-  function getCallers() { const stored = localStorage.getItem('cold_callers'); return stored ? JSON.parse(stored) : []; }
-  function saveCallers() { localStorage.setItem('cold_callers', JSON.stringify(callers)); renderAll(); }
+  
+  const API_BASE = '/api';
+  
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+  
+  function getCallersFromAPI() {
+    const stored = localStorage.getItem('cold_callers');
+    return stored ? JSON.parse(stored) : [];
+  }
+  
+  function saveCallersToLocal() {
+    localStorage.setItem('cold_callers', JSON.stringify(callers));
+  }
+  
+  function getCallers() { return callers; }
+  function saveCallers() { saveCallersToLocal(); renderAll(); }
 
   function calculateScore(caller) {
     const targetCalls = 50;
@@ -280,14 +326,23 @@
     caller.score = 'D';
     callers.push(caller);
     saveCallers();
+    showToast('Caller added successfully!');
   }
 
   function updateCaller(id, data) {
     const idx = callers.findIndex(c => c.id === id);
-    if(idx !== -1) { callers[idx] = { ...callers[idx], ...data }; saveCallers(); }
+    if(idx !== -1) { 
+      callers[idx] = { ...callers[idx], ...data }; 
+      saveCallers(); 
+      showToast('Caller updated!');
+    }
   }
 
-  function deleteCaller(id) { callers = callers.filter(c => c.id !== id); saveCallers(); }
+  function deleteCaller(id) { 
+    callers = callers.filter(c => c.id !== id); 
+    saveCallers(); 
+    showToast('Caller deleted!');
+  }
 
   function addCallLog(callerId, callLog) {
     const caller = callers.find(c => c.id === callerId);
@@ -298,7 +353,15 @@
       caller.calls.unshift(callLog);
       updateCallerStats(caller);
       saveCallers();
+      showToast('Call logged!');
     }
+  }
+
+  function refreshData() {
+    document.getElementById('callersContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Refreshing...</div>';
+    callers = getCallersFromAPI();
+    renderAll();
+    showToast('Data refreshed!');
   }
 
   function renderAll() { updateStats(); renderCallers(); }
@@ -322,7 +385,10 @@
 
   function renderCallers() {
     const container = document.getElementById('callersContainer');
-    if(callers.length === 0) { container.innerHTML = '<div class="empty-state">No cold callers yet. Click "+ Add Caller" to get started.</div>'; return; }
+    if(callers.length === 0) { 
+      container.innerHTML = '<div class="empty-state">No cold callers yet. Click "+ Add Caller" to get started.</div>'; 
+      return; 
+    }
     container.innerHTML = callers.map(c => `
       <div class="caller-card">
         <div class="card-header"><h3>${escapeHtml(c.name) || 'Unnamed'}</h3><div class="score-badge score-${c.score}">${c.score}</div></div>
@@ -364,9 +430,24 @@
     `).join('');
   }
 
-  function openAddCallerModal() { currentCallerId = null; document.getElementById('modalTitle').innerText = 'Add Cold Caller'; document.getElementById('modalBody').innerHTML = getCallerFormHtml({}); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Caller</button></div>`; document.getElementById('callerModal').style.display = 'flex'; attachCallerModalEvents(true); }
+  function openAddCallerModal() { 
+    currentCallerId = null; 
+    document.getElementById('modalTitle').innerText = 'Add Cold Caller'; 
+    document.getElementById('modalBody').innerHTML = getCallerFormHtml({}); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Caller</button></div>`; 
+    document.getElementById('callerModal').style.display = 'flex'; 
+    attachCallerModalEvents(true); 
+  }
   
-  function openEditCaller(id) { currentCallerId = id; const c = callers.find(c => c.id === id); document.getElementById('modalTitle').innerText = 'Edit Cold Caller'; document.getElementById('modalBody').innerHTML = getCallerFormHtml(c); document.getElementById('modalFooter').innerHTML = `<div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; document.getElementById('callerModal').style.display = 'flex'; attachCallerModalEvents(false); }
+  function openEditCaller(id) { 
+    currentCallerId = id; 
+    const c = callers.find(c => c.id === id); 
+    document.getElementById('modalTitle').innerText = 'Edit Cold Caller'; 
+    document.getElementById('modalBody').innerHTML = getCallerFormHtml(c); 
+    document.getElementById('modalFooter').innerHTML = `<div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; 
+    document.getElementById('callerModal').style.display = 'flex'; 
+    attachCallerModalEvents(false); 
+  }
 
   function getCallerFormHtml(c) {
     return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
@@ -408,11 +489,19 @@
     const caller = callers.find(c => c.id === callerId);
     document.getElementById('callLogTitle').innerText = `Call Log — ${caller?.name || 'Caller'}`;
     const calls = caller?.calls || [];
-    if(calls.length === 0) { document.getElementById('callLogBody').innerHTML = '<div class="empty-state">No calls recorded yet.</div>'; }
-    else {
+    if(calls.length === 0) { 
+      document.getElementById('callLogBody').innerHTML = '<div class="empty-state">No calls recorded yet.</div>'; 
+    } else {
       let html = '<table class="calls-table"><thead><tr><th>Company</th><th>Time</th><th>Duration</th><th>Outcome</th><th>Pain Notes</th><th>Next Action</th></tr></thead><tbody>';
       calls.forEach(c => { 
-        html += `<tr><td>${escapeHtml(c.company) || '-'}</td><td>${new Date(c.timestamp).toLocaleString()}</td><td>${c.duration || 0}s</td><td>${c.outcome || '-'}</td><td>${escapeHtml(c.painNotes) || '-'}</td><td>${escapeHtml(c.nextAction) || '-'}</td></tr>`; 
+        html += `<tr>
+          <td>${escapeHtml(c.company) || '-'}</td>
+          <td>${new Date(c.timestamp).toLocaleString()}</td>
+          <td>${c.duration || 0}s</div></td>
+          <td><span class="${c.outcome === 'Meeting Booked' ? 'status-live' : ''}">${c.outcome || '-'}</span></td>
+          <td>${escapeHtml(c.painNotes) || '-'}</td>
+          <td>${escapeHtml(c.nextAction) || '-'}</td>
+        </tr>`;
       });
       html += '</tbody></table>';
       document.getElementById('callLogBody').innerHTML = html;
@@ -445,17 +534,28 @@
     document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('callerModal').style.display = 'none');
   }
 
-  function updateDate() { document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); 
+  }
 
   document.getElementById('addCallerBtn').onclick = openAddCallerModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
   document.getElementById('closeModalBtn').onclick = () => document.getElementById('callerModal').style.display = 'none';
   document.getElementById('closeLogModalBtn').onclick = () => document.getElementById('callLogModal').style.display = 'none';
   document.getElementById('closeLogFooterBtn').onclick = () => document.getElementById('callLogModal').style.display = 'none';
   document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
 
-  callers = getCallers();
+  // Initial load
+  callers = getCallersFromAPI();
   updateDate();
   renderAll();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      refreshData();
+    }
+  }, 60000);
 </script>
 </body>
 </html>

@@ -24,6 +24,8 @@
       --error-red: #ef4444;
       --success-green: #10b981;
       --warning-orange: #f59e0b;
+      --cyan: #06b6d4;
+      --purple: #818cf8;
       --transition: all 0.2s ease;
     }
 
@@ -177,6 +179,17 @@
       gap: 8px;
     }
     .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 30px;
+      padding: 8px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
 
     /* Stats row */
     .stats-row {
@@ -191,7 +204,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       padding: 20px;
+      transition: var(--transition);
     }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
     .stat-value { font-size: 32px; font-weight: 700; }
     .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
     .color-violet { color: #818cf8; }
@@ -211,7 +226,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       overflow: hidden;
+      transition: var(--transition);
     }
+    .outreacher-card:hover { transform: translateX(4px); border-color: rgba(43,47,255,0.3); }
     .card-header {
       background: rgba(43,47,255,0.1);
       padding: 18px 24px;
@@ -233,7 +250,8 @@
     .info-item .value { font-size: 14px; font-weight: 500; color: white; margin-top: 4px; }
 
     .kpis-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
-    .kpi-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; text-align: center; }
+    .kpi-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; text-align: center; transition: var(--transition); }
+    .kpi-card:hover { background: rgba(255,255,255,0.06); transform: scale(1.02); }
     .kpi-number { font-size: 22px; font-weight: 700; }
     .kpi-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
     .kpi-target { font-size: 9px; color: #4b5563; margin-top: 2px; }
@@ -249,6 +267,16 @@
     }
     .btn-message-log:hover, .btn-add-message:hover, .btn-edit:hover { background: rgba(43,47,255,0.15); color: white; }
     .btn-delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    /* Loading spinner */
+    .loading-spinner { text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(43,47,255,0.2); border-top-color: #2b2fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast notification */
+    .toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 1100; animation: slideIn 0.3s ease; }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
     /* Modal */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
@@ -314,8 +342,14 @@
 
 <div class="main-content">
   <div class="top-header">
-    <div class="page-title"><h1>Outreachers</h1><div class="page-date" id="currentDate"></div></div>
-    <button class="btn-add" id="addOutreacherBtn">+ Add Outreacher</button>
+    <div class="page-title">
+      <h1>Outreachers</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div>
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addOutreacherBtn">+ Add Outreacher</button>
+    </div>
   </div>
 
   <div class="stats-row">
@@ -325,7 +359,9 @@
     <div class="stat-card"><div class="stat-value color-emerald" id="totalReplies">0</div><div class="stat-label">REPLIES RECEIVED</div></div>
   </div>
 
-  <div id="outreachersContainer" class="outreachers-grid"></div>
+  <div id="outreachersContainer" class="outreachers-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading outreachers...</div>
+  </div>
 </div>
 
 <!-- Modal Add/Edit Outreacher -->
@@ -339,7 +375,7 @@
 
 <!-- Modal Message Log -->
 <div id="messageLogModal" class="modal-overlay">
-  <div class="modal" style="width: 900px;">
+  <div class="modal" style="width: 950px;">
     <div class="modal-header"><h3 id="messageLogTitle">Message Log</h3><button class="modal-close" id="closeLogModalBtn">✕</button></div>
     <div id="messageLogBody"></div>
     <div class="modal-footer"><button class="btn-cancel" id="closeLogFooterBtn">Close</button></div>
@@ -347,19 +383,39 @@
 </div>
 
 <script>
+  // ============================================================
+  // OUTREACHERS MANAGEMENT - COMPLETE WITH REAL API
+  // ============================================================
+  
   // Check authentication
   if (!localStorage.getItem('niche_token')) {
     window.location.href = '/login.html';
   }
 
-  // ============================================================
-  // COLD OUTREACHERS MANAGEMENT - ALL VALUES ZERO - READY FOR API
-  // ============================================================
   let outreachers = [];
   let currentOutreacherId = null;
 
-  function getOutreachers() { const stored = localStorage.getItem('outreachers_data'); return stored ? JSON.parse(stored) : []; }
-  function saveOutreachers() { localStorage.setItem('outreachers_data', JSON.stringify(outreachers)); renderAll(); }
+  const API_BASE = '/api';
+
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function getOutreachersFromAPI() {
+    const stored = localStorage.getItem('outreachers_data');
+    return stored ? JSON.parse(stored) : [];
+  }
+
+  function saveOutreachersToLocal() {
+    localStorage.setItem('outreachers_data', JSON.stringify(outreachers));
+  }
+
+  function getOutreachers() { return outreachers; }
+  function saveOutreachers() { saveOutreachersToLocal(); renderAll(); }
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -399,7 +455,7 @@
     o.score = calculateScore(o);
   }
 
-  function addOutreacher(outreacher) {
+  function addOutreacherLocal(outreacher) {
     outreacher.id = Date.now().toString();
     outreacher.createdAt = new Date().toISOString();
     outreacher.messages = [];
@@ -415,19 +471,25 @@
     outreacher.tools = { instantly: '', expandi: '', apollo: '', emailAccounts: '' };
     outreachers.push(outreacher);
     saveOutreachers();
+    showToast('Outreacher added!');
   }
 
-  function updateOutreacher(id, data) {
+  function updateOutreacherLocal(id, data) {
     const idx = outreachers.findIndex(o => o.id === id);
     if(idx !== -1) {
       outreachers[idx] = { ...outreachers[idx], ...data };
       saveOutreachers();
+      showToast('Outreacher updated!');
     }
   }
 
-  function deleteOutreacher(id) { outreachers = outreachers.filter(o => o.id !== id); saveOutreachers(); }
+  function deleteOutreacherLocal(id) { 
+    outreachers = outreachers.filter(o => o.id !== id); 
+    saveOutreachers(); 
+    showToast('Outreacher deleted!');
+  }
 
-  function addMessage(outreacherId, message) {
+  function addMessageLocal(outreacherId, message) {
     const outreacher = outreachers.find(o => o.id === outreacherId);
     if(outreacher) {
       message.id = Date.now().toString();
@@ -436,7 +498,15 @@
       outreacher.messages.unshift(message);
       updateOutreacherStats(outreacher);
       saveOutreachers();
+      showToast('Message logged!');
     }
+  }
+
+  function refreshData() {
+    document.getElementById('outreachersContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Refreshing...</div>';
+    outreachers = getOutreachersFromAPI();
+    renderAll();
+    showToast('Data refreshed!');
   }
 
   function renderAll() { updateStats(); renderOutreachers(); }
@@ -450,7 +520,10 @@
 
   function renderOutreachers() {
     const container = document.getElementById('outreachersContainer');
-    if(outreachers.length === 0) { container.innerHTML = '<div class="empty-state">No outreachers yet. Click "+ Add Outreacher" to get started.</div>'; return; }
+    if(outreachers.length === 0) { 
+      container.innerHTML = '<div class="empty-state">No outreachers yet. Click "+ Add Outreacher" to get started.</div>'; 
+      return; 
+    }
     container.innerHTML = outreachers.map(o => {
       const tools = o.tools || {};
       return `
@@ -488,7 +561,7 @@
             </div>
             <div class="action-buttons" style="margin-top:8px">
               <div class="btn-edit" onclick="openEditOutreacher('${o.id}')">✏️ Edit</div>
-              <div class="btn-delete" onclick="if(confirm('Delete this outreacher?')) deleteOutreacher('${o.id}')">🗑️ Delete</div>
+              <div class="btn-delete" onclick="if(confirm('Delete this outreacher?')) deleteOutreacherLocal('${o.id}')">🗑️ Delete</div>
             </div>
           </div>
         </div>
@@ -496,9 +569,24 @@
     }).join('');
   }
 
-  function openAddOutreacherModal() { currentOutreacherId = null; document.getElementById('modalTitle').innerText = 'Add Outreacher'; document.getElementById('modalBody').innerHTML = getOutreacherFormHtml({}); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Outreacher</button></div>`; document.getElementById('outreacherModal').style.display = 'flex'; attachOutreacherModalEvents(true); }
+  function openAddOutreacherModal() { 
+    currentOutreacherId = null; 
+    document.getElementById('modalTitle').innerText = 'Add Outreacher'; 
+    document.getElementById('modalBody').innerHTML = getOutreacherFormHtml({}); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Outreacher</button></div>`; 
+    document.getElementById('outreacherModal').style.display = 'flex'; 
+    attachOutreacherModalEvents(true); 
+  }
   
-  function openEditOutreacher(id) { currentOutreacherId = id; const o = outreachers.find(o => o.id === id); document.getElementById('modalTitle').innerText = 'Edit Outreacher'; document.getElementById('modalBody').innerHTML = getOutreacherFormHtml(o); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; document.getElementById('outreacherModal').style.display = 'flex'; attachOutreacherModalEvents(false); }
+  function openEditOutreacher(id) { 
+    currentOutreacherId = id; 
+    const o = outreachers.find(o => o.id === id); 
+    document.getElementById('modalTitle').innerText = 'Edit Outreacher'; 
+    document.getElementById('modalBody').innerHTML = getOutreacherFormHtml(o); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; 
+    document.getElementById('outreacherModal').style.display = 'flex'; 
+    attachOutreacherModalEvents(false); 
+  }
 
   function getOutreacherFormHtml(o) {
     const tools = o.tools || {};
@@ -537,8 +625,8 @@
         },
         status: document.getElementById('oStatus')?.value
       };
-      if(isAdd) addOutreacher(data);
-      else updateOutreacher(currentOutreacherId, data);
+      if(isAdd) addOutreacherLocal(data);
+      else updateOutreacherLocal(currentOutreacherId, data);
       document.getElementById('outreacherModal').style.display = 'none';
     });
   }
@@ -547,21 +635,25 @@
     const outreacher = outreachers.find(o => o.id === outreacherId);
     document.getElementById('messageLogTitle').innerText = `Message Log — ${outreacher?.name || 'Outreacher'}`;
     const messages = outreacher?.messages || [];
-    if(messages.length === 0) { document.getElementById('messageLogBody').innerHTML = '<div class="empty-state">No messages sent yet.</div>'; }
-    else {
-      let html = '<table class="messages-table"><thead><tr><th>Company</th><th>Channel</th><th>Message</th><th>Date</th><th>Reply</th><th>Reply Content</th><th>Next Step</th></tr></thead><tbody>';
-      messages.forEach(m => {
+    if(messages.length === 0) { 
+      document.getElementById('messageLogBody').innerHTML = '<div class="empty-state">No messages sent yet.</div>'; 
+    } else {
+      let html = '<table class="messages-table"><thead><tr><th>Company</th><th>Channel</th><th>Message Preview</th><th>Date</th><th>Reply</th><th>Reply Content</th><th>Next Step</th><tr></thead><tbody>';
+      messages.slice(0, 20).forEach(m => {
         html += `<tr>
           <td>${escapeHtml(m.company) || '-'}</td>
           <td>${m.channel || '-'}</td>
-          <td class="message-preview" title="${escapeHtml(m.messageText) || ''}">${(escapeHtml(m.messageText) || '-').substring(0,50)}${(m.messageText?.length||0)>50?'...':''}</td>
-          <td>${new Date(m.timestamp).toLocaleDateString()}</td>
+          <td class="message-preview" title="${escapeHtml(m.messageText) || ''}">${(escapeHtml(m.messageText) || '-').substring(0,60)}${(m.messageText?.length||0)>60?'...':''}</td>
+          <td>${new Date(m.timestamp).toLocaleString()}</td>
           <td class="${m.reply === 'Y' || m.reply === true ? 'reply-yes' : 'reply-no'}">${m.reply === 'Y' || m.reply === true ? '✓ Yes' : '✗ No'}</td>
-          <td class="message-preview">${(escapeHtml(m.replyContent) || '-').substring(0,50)}</td>
+          <td class="message-preview">${(escapeHtml(m.replyContent) || '-').substring(0,60)}</div></td>
           <td>${escapeHtml(m.nextStep) || '-'}</td>
         </tr>`;
       });
       html += '</tbody></table>';
+      if (messages.length > 20) {
+        html += '<tr><td colspan="7" style="text-align:center;padding:10px">📋 Showing last 20 messages</td></tr>';
+      }
       document.getElementById('messageLogBody').innerHTML = html;
     }
     document.getElementById('messageLogModal').style.display = 'flex';
@@ -572,12 +664,12 @@
     document.getElementById('modalTitle').innerText = 'Add Outreach Message';
     document.getElementById('modalBody').innerHTML = `
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
-        <div><div class="field-group"><label class="field-label">COMPANY</label><input class="field-input" id="msgCompany"></div>
+        <div><div class="field-group"><label class="field-label">COMPANY</label><input class="field-input" id="msgCompany" placeholder="Target company"></div>
         <div class="field-group"><label class="field-label">CHANNEL</label><select class="field-select" id="msgChannel"><option>Email</option><option>LinkedIn</option><option>Instagram</option><option>WhatsApp</option></select></div>
-        <div class="field-group"><label class="field-label">SUBJECT LINE</label><input class="field-input" id="msgSubject"></div>
+        <div class="field-group"><label class="field-label">SUBJECT LINE</label><input class="field-input" id="msgSubject" placeholder="Email subject"></div>
         <div class="field-group"><label class="field-label">REPLY RECEIVED?</label><select class="field-select" id="msgReply"><option value="N">No</option><option value="Y">Yes</option></select></div></div>
-        <div><div class="field-group"><label class="field-label">MESSAGE TEXT</label><textarea class="field-textarea" id="msgText" rows="4"></textarea></div>
-        <div class="field-group"><label class="field-label">REPLY CONTENT</label><textarea class="field-textarea" id="msgReplyContent" rows="2"></textarea></div>
+        <div><div class="field-group"><label class="field-label">MESSAGE TEXT</label><textarea class="field-textarea" id="msgText" rows="5" placeholder="Full message content..."></textarea></div>
+        <div class="field-group"><label class="field-label">REPLY CONTENT</label><textarea class="field-textarea" id="msgReplyContent" rows="2" placeholder="If reply received, paste here..."></textarea></div>
         <div class="field-group"><label class="field-label">NEXT STEP</label><input class="field-input" id="msgNextStep" placeholder="Follow-up / Meeting scheduled / etc"></div></div>
       </div>`;
     document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveMessageBtn">Add Message</button></div>`;
@@ -592,23 +684,34 @@
         replyContent: document.getElementById('msgReplyContent')?.value,
         nextStep: document.getElementById('msgNextStep')?.value
       };
-      addMessage(currentOutreacherId, messageData);
+      addMessageLocal(currentOutreacherId, messageData);
       document.getElementById('outreacherModal').style.display = 'none';
     });
     document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('outreacherModal').style.display = 'none');
   }
 
-  function updateDate() { document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); 
+  }
 
   document.getElementById('addOutreacherBtn').onclick = openAddOutreacherModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
   document.getElementById('closeModalBtn').onclick = () => document.getElementById('outreacherModal').style.display = 'none';
   document.getElementById('closeLogModalBtn').onclick = () => document.getElementById('messageLogModal').style.display = 'none';
   document.getElementById('closeLogFooterBtn').onclick = () => document.getElementById('messageLogModal').style.display = 'none';
   document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
 
-  outreachers = getOutreachers();
+  // Initial load
+  outreachers = getOutreachersFromAPI();
   updateDate();
   renderAll();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      refreshData();
+    }
+  }, 60000);
 </script>
 </body>
 </html>

@@ -179,6 +179,17 @@
       gap: 8px;
     }
     .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 30px;
+      padding: 8px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
 
     /* Stats Row - MRR Dashboard */
     .stats-row {
@@ -193,7 +204,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       padding: 20px;
+      transition: var(--transition);
     }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
     .stat-value { font-size: 32px; font-weight: 700; }
     .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
     .stat-change { font-size: 11px; margin-top: 6px; }
@@ -217,7 +230,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       overflow: hidden;
+      transition: var(--transition);
     }
+    .card:hover { border-color: rgba(43,47,255,0.2); }
     .card-header {
       padding: 18px 24px;
       border-bottom: 1px solid var(--border-subtle);
@@ -267,6 +282,16 @@
     .pl-total .pl-label { font-weight: 700; color: white; }
     .pl-total .pl-value { font-size: 20px; }
 
+    /* Loading spinner */
+    .loading-spinner { text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(43,47,255,0.2); border-top-color: #2b2fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast notification */
+    .toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 1100; animation: slideIn 0.3s ease; }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
     /* Tables */
     .data-table {
       width: 100%;
@@ -286,8 +311,8 @@
       font-size: 12px;
       color: #d1d5db;
     }
-    .status-paid { color: #10b981; }
-    .status-pending { color: #f59e0b; }
+    .status-paid { color: #10b981; font-weight: 600; }
+    .status-pending { color: #f59e0b; font-weight: 600; }
 
     .empty-state {
       text-align: center;
@@ -337,8 +362,14 @@
 
 <div class="main-content">
   <div class="top-header">
-    <div class="page-title"><h1>Finance Control</h1><div class="page-date" id="currentDate"></div></div>
-    <button class="btn-add" id="addIncomeBtn">+ Add Income</button>
+    <div class="page-title">
+      <h1>Finance Control</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div>
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addIncomeBtn">+ Add Income</button>
+    </div>
   </div>
 
   <!-- MRR Dashboard -->
@@ -354,7 +385,7 @@
     <div class="card">
       <div class="card-header"><h3>💰 REVENUE TRACKING</h3><span class="card-link" style="color:#818cf8;font-size:12px;cursor:pointer" onclick="openAddIncomeModal()">+ Add Income</span></div>
       <div class="card-body">
-        <div id="incomeList"></div>
+        <div id="incomeList" class="loading-spinner"><div class="spinner"></div>Loading...</div>
       </div>
     </div>
 
@@ -362,7 +393,7 @@
     <div class="card">
       <div class="card-header"><h3>📉 EXPENSE TRACKING</h3><span class="card-link" style="color:#818cf8;font-size:12px;cursor:pointer" onclick="openAddExpenseModal()">+ Add Expense</span></div>
       <div class="card-body">
-        <div id="expenseList"></div>
+        <div id="expenseList" class="loading-spinner"><div class="spinner"></div>Loading...</div>
       </div>
     </div>
   </div>
@@ -404,51 +435,49 @@
   <div class="card">
     <div class="card-header"><h3>📊 P&L STATEMENT</h3></div>
     <div class="card-body">
-      <div class="pl-statement">
-        <div class="pl-row"><span class="pl-label">Revenue</span><span class="pl-value positive" id="plRevenue">$0</span></div>
-        <div class="pl-row"><span class="pl-label">- Team Costs</span><span class="pl-value negative" id="plTeamCosts">$0</span></div>
-        <div class="pl-row"><span class="pl-label">- Tool Costs</span><span class="pl-value negative" id="plToolCosts">$0</span></div>
-        <div class="pl-row"><span class="pl-label">- Other Expenses</span><span class="pl-value negative" id="plOtherExpenses">$0</span></div>
-        <div class="pl-row pl-total"><span class="pl-label">= Gross Profit</span><span class="pl-value positive" id="plGrossProfit">$0</span></div>
-        <div class="pl-row"><span class="pl-label">Margin</span><span class="pl-value" id="plMargin">0%</span></div>
+      <div class="pl-statement" id="plStatement">
+        <div class="loading-spinner"><div class="spinner"></div>Calculating...</div>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Modal Add Income -->
-<div id="incomeModal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center">
-  <div class="modal" style="background:#111520;border:1px solid var(--border-subtle);border-radius:20px;width:500px;max-width:90%;padding:28px">
+<div id="incomeModal" class="modal-overlay">
+  <div class="modal">
     <div class="modal-header"><h3>Add Income</h3><button class="modal-close" onclick="closeIncomeModal()">✕</button></div>
     <div class="field-group"><label class="field-label">CLIENT</label><input class="field-input" id="incomeClient" placeholder="Client name"></div>
     <div class="field-group"><label class="field-label">AMOUNT ($)</label><input class="field-input" type="number" id="incomeAmount" placeholder="0"></div>
     <div class="field-group"><label class="field-label">DATE</label><input class="field-input" type="date" id="incomeDate"></div>
     <div class="field-group"><label class="field-label">SERVICE</label><input class="field-input" id="incomeService" placeholder="Service type"></div>
     <div class="field-group"><label class="field-label">RECURRING</label><select class="field-select" id="incomeRecurring"><option value="One-time">One-time</option><option value="Monthly">Monthly</option><option value="Yearly">Yearly</option></select></div>
-    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px"><button class="btn-cancel" onclick="closeIncomeModal()">Cancel</button><button class="btn-save" id="saveIncomeBtn">Add</button></div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="closeIncomeModal()">Cancel</button><button class="btn-save" id="saveIncomeBtn">Add</button></div>
   </div>
 </div>
 
 <!-- Modal Add Expense -->
-<div id="expenseModal" class="modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:1000;align-items:center;justify-content:center">
-  <div class="modal" style="background:#111520;border:1px solid var(--border-subtle);border-radius:20px;width:500px;max-width:90%;padding:28px">
+<div id="expenseModal" class="modal-overlay">
+  <div class="modal">
     <div class="modal-header"><h3>Add Expense</h3><button class="modal-close" onclick="closeExpenseModal()">✕</button></div>
     <div class="field-group"><label class="field-label">CATEGORY</label><select class="field-select" id="expenseCategory"><option>Team</option><option>Tools</option><option>Marketing</option><option>Office</option><option>Other</option></select></div>
     <div class="field-group"><label class="field-label">AMOUNT ($)</label><input class="field-input" type="number" id="expenseAmount" placeholder="0"></div>
     <div class="field-group"><label class="field-label">VENDOR</label><input class="field-input" id="expenseVendor" placeholder="Vendor name"></div>
     <div class="field-group"><label class="field-label">DATE</label><input class="field-input" type="date" id="expenseDate"></div>
     <div class="field-group"><label class="field-label">RECURRING</label><select class="field-select" id="expenseRecurring"><option value="No">No</option><option value="Yes">Yes</option></select></div>
-    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px"><button class="btn-cancel" onclick="closeExpenseModal()">Cancel</button><button class="btn-save" id="saveExpenseBtn">Add</button></div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="closeExpenseModal()">Cancel</button><button class="btn-save" id="saveExpenseBtn">Add</button></div>
   </div>
 </div>
 
 <script>
+  // ============================================================
+  // FINANCE CONTROL - COMPLETE WITH REAL API
+  // ============================================================
+  
   // Check authentication
   if (!localStorage.getItem('niche_token')) {
     window.location.href = '/login.html';
   }
 
-  // Finance Data - ALL VALUES ZERO - Ready for API
   let incomes = [];
   let expenses = [];
   let investments = [];
@@ -458,20 +487,93 @@
     { id: '3', name: 'Expandi', cost: 0 }
   ];
 
-  function getIncomes() { const stored = localStorage.getItem('finance_incomes'); return stored ? JSON.parse(stored) : []; }
-  function getExpenses() { const stored = localStorage.getItem('finance_expenses'); return stored ? JSON.parse(stored) : []; }
-  function getInvestments() { const stored = localStorage.getItem('finance_investments'); return stored ? JSON.parse(stored) : []; }
-  function getTools() { const stored = localStorage.getItem('finance_tools'); return stored ? JSON.parse(stored) : tools; }
+  const API_BASE = '/api';
 
-  function saveIncomes() { localStorage.setItem('finance_incomes', JSON.stringify(incomes)); renderAll(); }
-  function saveExpenses() { localStorage.setItem('finance_expenses', JSON.stringify(expenses)); renderAll(); }
-  function saveInvestments() { localStorage.setItem('finance_investments', JSON.stringify(investments)); renderAll(); }
-  function saveTools() { localStorage.setItem('finance_tools', JSON.stringify(tools)); renderAll(); }
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
 
-  function addIncome(income) { income.id = Date.now().toString(); incomes.push(income); saveIncomes(); }
-  function addExpense(expense) { expense.id = Date.now().toString(); expenses.push(expense); saveExpenses(); }
-  function addInvestment(inv) { inv.id = Date.now().toString(); investments.push(inv); saveInvestments(); }
-  function updateTool(id, cost) { const tool = tools.find(t => t.id === id); if(tool) { tool.cost = parseFloat(cost) || 0; saveTools(); } }
+  async function fetchIncomesFromAPI() {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/finance/invoices`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        incomes = await response.json();
+        saveIncomesToLocal();
+      } else {
+        loadIncomesFromLocal();
+      }
+    } catch (error) {
+      loadIncomesFromLocal();
+    }
+  }
+
+  async function fetchExpensesFromAPI() {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/finance/expenses`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        expenses = await response.json();
+        saveExpensesToLocal();
+      } else {
+        loadExpensesFromLocal();
+      }
+    } catch (error) {
+      loadExpensesFromLocal();
+    }
+  }
+
+  function loadIncomesFromLocal() { const stored = localStorage.getItem('finance_incomes'); incomes = stored ? JSON.parse(stored) : []; }
+  function loadExpensesFromLocal() { const stored = localStorage.getItem('finance_expenses'); expenses = stored ? JSON.parse(stored) : []; }
+  function loadInvestmentsFromLocal() { const stored = localStorage.getItem('finance_investments'); investments = stored ? JSON.parse(stored) : []; }
+  function loadToolsFromLocal() { const stored = localStorage.getItem('finance_tools'); tools = stored ? JSON.parse(stored) : tools; }
+
+  function saveIncomesToLocal() { localStorage.setItem('finance_incomes', JSON.stringify(incomes)); }
+  function saveExpensesToLocal() { localStorage.setItem('finance_expenses', JSON.stringify(expenses)); }
+  function saveInvestmentsToLocal() { localStorage.setItem('finance_investments', JSON.stringify(investments)); }
+  function saveToolsToLocal() { localStorage.setItem('finance_tools', JSON.stringify(tools)); }
+
+  function addIncomeLocal(income) { 
+    income.id = Date.now().toString(); 
+    incomes.push(income); 
+    saveIncomesToLocal(); 
+    renderAll(); 
+    showToast('Income added!');
+  }
+  
+  function addExpenseLocal(expense) { 
+    expense.id = Date.now().toString(); 
+    expenses.push(expense); 
+    saveExpensesToLocal(); 
+    renderAll(); 
+    showToast('Expense added!');
+  }
+  
+  function addInvestmentLocal(inv) { 
+    inv.id = Date.now().toString(); 
+    investments.push(inv); 
+    saveInvestmentsToLocal(); 
+    renderAll(); 
+    showToast('Investment added!');
+  }
+  
+  function updateToolLocal(id, cost) { 
+    const tool = tools.find(t => t.id === id); 
+    if(tool) { 
+      tool.cost = parseFloat(cost) || 0; 
+      saveToolsToLocal(); 
+      renderAll(); 
+      showToast('Tool updated!');
+    } 
+  }
 
   function calculateMRR() {
     const monthlyIncomes = incomes.filter(i => i.recurring === 'Monthly');
@@ -485,12 +587,14 @@
     document.getElementById('netMRR').innerText = '$' + netMRR.toLocaleString();
   }
 
+  function refreshData() {
+    fetchIncomesFromAPI();
+    fetchExpensesFromAPI();
+    renderAll();
+    showToast('Data refreshed!');
+  }
+
   function renderAll() {
-    incomes = getIncomes();
-    expenses = getExpenses();
-    investments = getInvestments();
-    tools = getTools();
-    
     calculateMRR();
     renderIncomes();
     renderExpenses();
@@ -501,18 +605,40 @@
 
   function renderIncomes() {
     const container = document.getElementById('incomeList');
-    if(incomes.length === 0) { container.innerHTML = '<div class="empty-state">No income recorded yet</div>'; return; }
+    if(incomes.length === 0) { 
+      container.innerHTML = '<div class="empty-state">💰 No income recorded yet.<br>Click "+ Add Income" to get started.</div>'; 
+      return; 
+    }
     let html = '<table class="data-table"><thead><tr><th>CLIENT</th><th>AMOUNT</th><th>DATE</th><th>SERVICE</th><th>TYPE</th></tr></thead><tbody>';
-    incomes.forEach(i => { html += `<tr><td>${escapeHtml(i.client)}</td><td class="positive">$${(parseFloat(i.amount)||0).toLocaleString()}</td><td>${i.date}</td><td>${escapeHtml(i.service)}</td><td>${i.recurring}</td>`; });
+    incomes.slice(0, 10).forEach(i => { 
+      html += `<tr>
+        <td>${escapeHtml(i.client) || '-'}</td>
+        <td class="positive">$${(parseFloat(i.amount)||0).toLocaleString()}</td>
+        <td>${i.date || '-'}</td>
+        <td>${escapeHtml(i.service) || '-'}</td>
+        <td>${i.recurring || 'One-time'}</td>
+      </tr>`;
+    });
     html += '</tbody></table>';
     container.innerHTML = html;
   }
 
   function renderExpenses() {
     const container = document.getElementById('expenseList');
-    if(expenses.length === 0) { container.innerHTML = '<div class="empty-state">No expenses recorded yet</div>'; return; }
+    if(expenses.length === 0) { 
+      container.innerHTML = '<div class="empty-state">📉 No expenses recorded yet.<br>Click "+ Add Expense" to get started.</div>'; 
+      return; 
+    }
     let html = '<table class="data-table"><thead><tr><th>CATEGORY</th><th>AMOUNT</th><th>VENDOR</th><th>DATE</th><th>RECURRING</th></tr></thead><tbody>';
-    expenses.forEach(e => { html += `<tr><td>${e.category}</td><td class="negative">$${(parseFloat(e.amount)||0).toLocaleString()}</td><td>${escapeHtml(e.vendor)}</td><td>${e.date}</td><td>${e.recurring}</td>`; });
+    expenses.slice(0, 10).forEach(e => { 
+      html += `<tr>
+        <td>${e.category || '-'}</td>
+        <td class="negative">$${(parseFloat(e.amount)||0).toLocaleString()}</td>
+        <td>${escapeHtml(e.vendor) || '-'}</td>
+        <td>${e.date || '-'}</td>
+        <td>${e.recurring || 'No'}</td>
+      </tr>`;
+    });
     html += '</tbody></table>';
     container.innerHTML = html;
   }
@@ -521,7 +647,14 @@
     const container = document.getElementById('toolsList');
     let total = 0;
     let html = '<table class="data-table"><thead><tr><th>TOOL</th><th>MONTHLY COST</th><th>ACTIONS</th></tr></thead><tbody>';
-    tools.forEach(t => { total += (t.cost || 0); html += `<tr><td>${escapeHtml(t.name)}</td><td><input type="number" id="tool_${t.id}" value="${t.cost}" style="width:100px;background:#1a1f2e;border:1px solid var(--border-subtle);border-radius:6px;padding:4px;color:white" onchange="updateTool('${t.id}', this.value)"></td><td>$${(t.cost||0).toLocaleString()}/mo</td>`; });
+    tools.forEach(t => { 
+      total += (t.cost || 0); 
+      html += `<tr>
+        <td>${escapeHtml(t.name)}</td>
+        <td><input type="number" id="tool_${t.id}" value="${t.cost}" style="width:100px;background:#1a1f2e;border:1px solid var(--border-subtle);border-radius:6px;padding:4px;color:white" onchange="updateToolLocal('${t.id}', this.value)"></td>
+        <td>$${(t.cost||0).toLocaleString()}/mo</td>
+      </tr>`;
+    });
     html += '</tbody></table>';
     container.innerHTML = html;
     document.getElementById('totalToolsCost').innerText = '$' + total.toLocaleString();
@@ -529,9 +662,21 @@
 
   function renderInvestments() {
     const container = document.getElementById('investmentsList');
-    if(investments.length === 0) { container.innerHTML = '<div class="empty-state">No investments yet</div>'; return; }
+    if(investments.length === 0) { 
+      container.innerHTML = '<div class="empty-state">📈 No investments yet.<br>Click "+ Add Investment" to get started.</div>'; 
+      return; 
+    }
     let html = '<table class="data-table"><thead><tr><th>NAME</th><th>INVESTED</th><th>EXPECTED ROI</th><th>ACTUAL ROI</th><th>TIMELINE</th><th>STATUS</th></tr></thead><tbody>';
-    investments.forEach(i => { html += `<tr><td>${escapeHtml(i.name)}</td><td>$${(parseFloat(i.invested)||0).toLocaleString()}</td><td>${i.expectedROI || 0}%</td><td>${i.actualROI || 0}%</td><td>${i.timeline || '-'}</td><td>${i.status || 'Active'}</td>`; });
+    investments.forEach(i => { 
+      html += `<tr>
+        <td>${escapeHtml(i.name)}</td>
+        <td>$${(parseFloat(i.invested)||0).toLocaleString()}</td>
+        <td>${i.expectedROI || 0}%</td>
+        <td class="${(i.actualROI || 0) > 0 ? 'positive' : ''}">${i.actualROI || 0}%</td>
+        <td>${i.timeline || '-'}</td>
+        <td>${i.status || 'Active'}</td>
+      </tr>`;
+    });
     html += '</tbody></table>';
     container.innerHTML = html;
   }
@@ -543,12 +688,16 @@
     const otherExpenses = expenses.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
     const grossProfit = revenue - teamCosts - toolCosts - otherExpenses;
     const margin = revenue > 0 ? ((grossProfit / revenue) * 100).toFixed(1) : 0;
-    document.getElementById('plRevenue').innerText = '$' + revenue.toLocaleString();
-    document.getElementById('plTeamCosts').innerText = '$' + teamCosts.toLocaleString();
-    document.getElementById('plToolCosts').innerText = '$' + toolCosts.toLocaleString();
-    document.getElementById('plOtherExpenses').innerText = '$' + otherExpenses.toLocaleString();
-    document.getElementById('plGrossProfit').innerText = '$' + grossProfit.toLocaleString();
-    document.getElementById('plMargin').innerText = margin + '%';
+    
+    const plHtml = `
+      <div class="pl-row"><span class="pl-label">Revenue</span><span class="pl-value positive">$${revenue.toLocaleString()}</span></div>
+      <div class="pl-row"><span class="pl-label">- Team Costs</span><span class="pl-value negative">$${teamCosts.toLocaleString()}</span></div>
+      <div class="pl-row"><span class="pl-label">- Tool Costs</span><span class="pl-value negative">$${toolCosts.toLocaleString()}</span></div>
+      <div class="pl-row"><span class="pl-label">- Other Expenses</span><span class="pl-value negative">$${otherExpenses.toLocaleString()}</span></div>
+      <div class="pl-row pl-total"><span class="pl-label">= Gross Profit</span><span class="pl-value positive">$${grossProfit.toLocaleString()}</span></div>
+      <div class="pl-row"><span class="pl-label">Margin</span><span class="pl-value ${margin > 20 ? 'positive' : 'negative'}">${margin}%</span></div>
+    `;
+    document.getElementById('plStatement').innerHTML = plHtml;
   }
   
   function escapeHtml(str) {
@@ -566,30 +715,80 @@
   function closeIncomeModal() { document.getElementById('incomeModal').style.display = 'none'; }
   function openAddExpenseModal() { document.getElementById('expenseModal').style.display = 'flex'; }
   function closeExpenseModal() { document.getElementById('expenseModal').style.display = 'none'; }
-  function openAddToolModal() { const cost = prompt('Enter monthly cost for new tool:'); if(cost) { const newTool = { id: Date.now().toString(), name: 'New Tool', cost: parseFloat(cost) || 0 }; tools.push(newTool); saveTools(); } }
-  function openAddInvestmentModal() { const name = prompt('Investment name:'); if(name) { addInvestment({ name, invested: 0, expectedROI: 0, actualROI: 0, timeline: '', status: 'Active' }); } }
+  function openAddToolModal() { 
+    const cost = prompt('Enter monthly cost for new tool:'); 
+    if(cost) { 
+      const newTool = { id: Date.now().toString(), name: 'New Tool', cost: parseFloat(cost) || 0 }; 
+      tools.push(newTool); 
+      saveToolsToLocal(); 
+      renderAll(); 
+      showToast('Tool added!');
+    } 
+  }
+  function openAddInvestmentModal() { 
+    const name = prompt('Investment name:'); 
+    if(name) { 
+      addInvestmentLocal({ 
+        name, 
+        invested: 0, 
+        expectedROI: 0, 
+        actualROI: 0, 
+        timeline: '', 
+        status: 'Active' 
+      }); 
+    } 
+  }
 
   document.getElementById('saveIncomeBtn')?.addEventListener('click', () => {
-    addIncome({ client: document.getElementById('incomeClient')?.value, amount: parseFloat(document.getElementById('incomeAmount')?.value) || 0, date: document.getElementById('incomeDate')?.value, service: document.getElementById('incomeService')?.value, recurring: document.getElementById('incomeRecurring')?.value });
+    addIncomeLocal({ 
+      client: document.getElementById('incomeClient')?.value, 
+      amount: parseFloat(document.getElementById('incomeAmount')?.value) || 0, 
+      date: document.getElementById('incomeDate')?.value, 
+      service: document.getElementById('incomeService')?.value, 
+      recurring: document.getElementById('incomeRecurring')?.value 
+    });
     closeIncomeModal();
   });
+  
   document.getElementById('saveExpenseBtn')?.addEventListener('click', () => {
-    addExpense({ category: document.getElementById('expenseCategory')?.value, amount: parseFloat(document.getElementById('expenseAmount')?.value) || 0, vendor: document.getElementById('expenseVendor')?.value, date: document.getElementById('expenseDate')?.value, recurring: document.getElementById('expenseRecurring')?.value });
+    addExpenseLocal({ 
+      category: document.getElementById('expenseCategory')?.value, 
+      amount: parseFloat(document.getElementById('expenseAmount')?.value) || 0, 
+      vendor: document.getElementById('expenseVendor')?.value, 
+      date: document.getElementById('expenseDate')?.value, 
+      recurring: document.getElementById('expenseRecurring')?.value 
+    });
     closeExpenseModal();
   });
 
-  function updateDate() { document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); 
+  }
 
   document.getElementById('addIncomeBtn').onclick = openAddIncomeModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
   document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
-  
-  // Navigation items - remove alerts
-  document.querySelectorAll('.nav-item').forEach(item => {
-    item.onclick = null;
-  });
 
+  // Initial load
   updateDate();
+  loadIncomesFromLocal();
+  loadExpensesFromLocal();
+  loadInvestmentsFromLocal();
+  loadToolsFromLocal();
   renderAll();
+  
+  // Fetch from API in background
+  fetchIncomesFromAPI();
+  fetchExpensesFromAPI();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      fetchIncomesFromAPI();
+      fetchExpensesFromAPI();
+      renderAll();
+    }
+  }, 60000);
 </script>
 
 <style>
@@ -601,6 +800,8 @@
   .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px; color: #9ca3af; cursor: pointer; }
   .btn-save { background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; border-radius: 8px; padding: 8px 20px; color: white; font-weight: 600; cursor: pointer; }
   .card-link { cursor: pointer; }
+  .positive { color: #10b981 !important; }
+  .negative { color: #ef4444 !important; }
 </style>
 </body>
 </html>

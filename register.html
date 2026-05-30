@@ -235,6 +235,15 @@
     .footer { text-align: center; font-size: 11px; color: var(--text-muted); margin-top: 24px; }
     .footer a { color: var(--blue-primary); text-decoration: none; }
 
+    /* Password strength indicator */
+    .password-strength {
+      margin-top: 6px;
+      font-size: 10px;
+    }
+    .strength-weak { color: #ef4444; }
+    .strength-medium { color: #f59e0b; }
+    .strength-strong { color: #10b981; }
+
     @media (max-width: 600px) {
       .register-card { padding: 32px 24px; }
       .two-columns { grid-template-columns: 1fr; }
@@ -357,6 +366,7 @@
           <input type="password" id="password" placeholder="••••••••" required>
           <span class="password-toggle" id="togglePassword">👁️</span>
         </div>
+        <div class="password-strength" id="passwordStrength"></div>
       </div>
       <div class="field">
         <label>CONFIRM PASSWORD *</label>
@@ -390,6 +400,7 @@
 
   const togglePassword = document.getElementById('togglePassword');
   const passwordInput = document.getElementById('password');
+  const confirmPasswordInput = document.getElementById('confirmPassword');
   const registerBtn = document.getElementById('registerBtn');
   const spinner = document.getElementById('spinner');
   const errorMsg = document.getElementById('errorMsg');
@@ -399,11 +410,38 @@
   const avatarPlaceholder = document.getElementById('avatarPlaceholder');
   const avatarImage = document.getElementById('avatarImage');
   const avatarFile = document.getElementById('avatarFile');
+  const passwordStrength = document.getElementById('passwordStrength');
+
+  // Password strength checker
+  function checkPasswordStrength(password) {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (password.match(/[a-z]+/)) strength++;
+    if (password.match(/[A-Z]+/)) strength++;
+    if (password.match(/[0-9]+/)) strength++;
+    if (password.match(/[$@#&!]+/)) strength++;
+    
+    if (strength <= 2) return { text: 'Weak', class: 'strength-weak' };
+    if (strength <= 4) return { text: 'Medium', class: 'strength-medium' };
+    return { text: 'Strong', class: 'strength-strong' };
+  }
+
+  // Check password strength on input
+  passwordInput.addEventListener('input', () => {
+    const result = checkPasswordStrength(passwordInput.value);
+    passwordStrength.innerHTML = `<span class="${result.class}">🔒 Password strength: ${result.text}</span>`;
+  });
 
   // Preview image when file selected
   avatarFile.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Check file size (max 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        errorMsg.textContent = 'Image too large. Maximum 2MB.';
+        errorMsg.classList.add('visible');
+        return;
+      }
       selectedAvatarFile = file;
       const reader = new FileReader();
       reader.onload = function(event) {
@@ -458,6 +496,14 @@
     const avatar = avatarInitials.value.trim().toUpperCase() || fullName.substring(0,2).toUpperCase();
     const password = document.getElementById('password').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
+
+    // Validation email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      errorMsg.textContent = 'Please enter a valid email address.';
+      errorMsg.classList.add('visible');
+      return;
+    }
 
     if (!fullName || !username || !email || !phone || !password) {
       errorMsg.textContent = 'Please fill all required fields (*).';

@@ -179,6 +179,18 @@
       gap: 8px;
     }
     .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 30px;
+      padding: 8px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 12px;
+      transition: var(--transition);
+      margin-left: 10px;
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
 
     /* Stats row */
     .stats-row {
@@ -193,7 +205,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       padding: 20px;
+      transition: var(--transition);
     }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
     .stat-value { font-size: 32px; font-weight: 700; }
     .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
     .color-violet { color: #818cf8; }
@@ -219,6 +233,7 @@
       cursor: pointer;
       transition: var(--transition);
     }
+    .filter-chip.active { background: rgba(43,47,255,0.15); color: var(--blue-primary); border-color: var(--blue-primary); }
     .filter-chip:hover { background: rgba(43,47,255,0.1); color: white; }
 
     /* Clients grid */
@@ -233,7 +248,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       overflow: hidden;
+      transition: var(--transition);
     }
+    .client-card:hover { transform: translateX(4px); border-color: rgba(43,47,255,0.3); }
     .card-header {
       background: rgba(43,47,255,0.1);
       padding: 18px 24px;
@@ -299,6 +316,43 @@
     }
     .btn-projects:hover, .btn-invoices:hover, .btn-edit:hover { background: rgba(43,47,255,0.15); color: white; }
     .btn-delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    /* Loading spinner */
+    .loading-spinner {
+      text-align: center;
+      padding: 40px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(43,47,255,0.2);
+      border-top-color: #2b2fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #10b981;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 1100;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
 
     /* Modal */
     .modal-overlay {
@@ -458,8 +512,14 @@
 
 <div class="main-content">
   <div class="top-header">
-    <div class="page-title"><h1>Clients</h1><div class="page-date" id="currentDate"></div></div>
-    <button class="btn-add" id="addClientBtn">+ Add Client</button>
+    <div class="page-title">
+      <h1>Clients</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div>
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addClientBtn">+ Add Client</button>
+    </div>
   </div>
 
   <div class="stats-row">
@@ -470,13 +530,15 @@
   </div>
 
   <div class="filter-bar">
-    <div class="filter-chip">🔍 All Clients</div>
-    <div class="filter-chip">💰 Revenue: Highest First</div>
-    <div class="filter-chip">✅ Active Only</div>
-    <div class="filter-chip">📅 Recently Added</div>
+    <div class="filter-chip active" data-filter="all">🔍 All Clients</div>
+    <div class="filter-chip" data-filter="revenue">💰 Revenue: Highest First</div>
+    <div class="filter-chip" data-filter="active">✅ Active Only</div>
+    <div class="filter-chip" data-filter="recent">📅 Recently Added</div>
   </div>
 
-  <div id="clientsContainer" class="clients-grid"></div>
+  <div id="clientsContainer" class="clients-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading clients...</div>
+  </div>
 </div>
 
 <!-- Modal Add/Edit Client -->
@@ -508,7 +570,7 @@
 
 <script>
   // ============================================================
-  // CLIENTS MANAGEMENT - ALL VALUES ZERO - READY FOR API
+  // CLIENTS MANAGEMENT - CONNECTED TO REAL API
   // ============================================================
   
   // Check authentication
@@ -520,31 +582,102 @@
   let currentClientId = null;
   let currentProjectsClientId = null;
   let currentInvoicesClientId = null;
+  let currentFilter = 'all';
+  
+  const API_BASE = '/api';
+  
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+  
+  async function fetchClientsFromAPI() {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/clients`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        clients = await response.json();
+        saveClientsToLocal();
+        renderAll();
+      } else {
+        loadFromLocal();
+      }
+    } catch (error) {
+      console.error('API error:', error);
+      loadFromLocal();
+    }
+  }
+  
+  function loadFromLocal() {
+    const stored = localStorage.getItem('clients_data_v2');
+    clients = stored ? JSON.parse(stored) : [];
+    renderAll();
+  }
+  
+  function saveClientsToLocal() {
+    localStorage.setItem('clients_data_v2', JSON.stringify(clients));
+  }
+  
+  function getClients() { return clients; }
+  function saveClients() { saveClientsToLocal(); renderAll(); }
 
-  function getClients() { const stored = localStorage.getItem('clients_data_v2'); return stored ? JSON.parse(stored) : []; }
-  function saveClients() { localStorage.setItem('clients_data_v2', JSON.stringify(clients)); renderAll(); }
-
-  function addClient(client) {
+  async function addClientToAPI(client) {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/clients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(client)
+      });
+      if (response.ok) {
+        const newClient = await response.json();
+        clients.push(newClient);
+        saveClientsToLocal();
+        renderAll();
+        showToast('Client added successfully!');
+      } else {
+        addClientLocal(client);
+      }
+    } catch (error) {
+      addClientLocal(client);
+    }
+  }
+  
+  function addClientLocal(client) {
     client.id = Date.now().toString();
     client.createdAt = new Date().toISOString().split('T')[0];
     client.projects = [];
     client.invoices = [];
-    client.status = 'active';
+    client.status = client.status || 'active';
     clients.push(client);
     saveClients();
+    showToast('Client added locally!');
   }
 
-  function updateClient(id, data) {
+  function updateClientLocal(id, data) {
     const idx = clients.findIndex(c => c.id === id);
     if(idx !== -1) {
       clients[idx] = { ...clients[idx], ...data };
       saveClients();
+      showToast('Client updated!');
     }
   }
 
-  function deleteClient(id) { clients = clients.filter(c => c.id !== id); saveClients(); }
+  function deleteClientLocal(id) { 
+    clients = clients.filter(c => c.id !== id); 
+    saveClients(); 
+    showToast('Client deleted!');
+  }
 
-  function addProject(clientId, project) {
+  function addProjectLocal(clientId, project) {
     const client = clients.find(c => c.id === clientId);
     if(client) {
       project.id = Date.now().toString();
@@ -552,10 +685,11 @@
       client.projects = client.projects || [];
       client.projects.push(project);
       saveClients();
+      showToast('Project added!');
     }
   }
 
-  function addInvoice(clientId, invoice) {
+  function addInvoiceLocal(clientId, invoice) {
     const client = clients.find(c => c.id === clientId);
     if(client) {
       invoice.id = Date.now().toString();
@@ -563,6 +697,7 @@
       client.invoices = client.invoices || [];
       client.invoices.push(invoice);
       saveClients();
+      showToast('Invoice added!');
     }
   }
 
@@ -579,10 +714,28 @@
     document.getElementById('activeProjects').innerText = activeProj;
   }
 
+  function getFilteredClients() {
+    let filtered = [...clients];
+    if (currentFilter === 'active') {
+      filtered = filtered.filter(c => c.status === 'active');
+    } else if (currentFilter === 'revenue') {
+      filtered.sort((a, b) => (b.budget || 0) - (a.budget || 0));
+    } else if (currentFilter === 'recent') {
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+    return filtered;
+  }
+
   function renderClients() {
     const container = document.getElementById('clientsContainer');
-    if(clients.length === 0) { container.innerHTML = '<div class="empty-state">No clients yet. Click "+ Add Client" to get started.</div>'; return; }
-    container.innerHTML = clients.map(c => {
+    const filteredClients = getFilteredClients();
+    
+    if(filteredClients.length === 0) { 
+      container.innerHTML = '<div class="empty-state">No clients yet. Click "+ Add Client" to get started.</div>'; 
+      return; 
+    }
+    
+    container.innerHTML = filteredClients.map(c => {
       const projectsCount = c.projects?.length || 0;
       const invoicesCount = c.invoices?.length || 0;
       const totalInvoiced = c.invoices?.reduce((sum, i) => sum + (i.amount || 0), 0) || 0;
@@ -617,7 +770,7 @@
             </div>
             <div class="action-buttons" style="margin-top:8px">
               <div class="btn-edit" onclick="openEditClient('${c.id}')">✏️ Edit</div>
-              <div class="btn-delete" onclick="if(confirm('Delete this client?')) deleteClient('${c.id}')">🗑️ Delete</div>
+              <div class="btn-delete" onclick="if(confirm('Delete this client?')) deleteClientLocal('${c.id}')">🗑️ Delete</div>
             </div>
           </div>
         </div>
@@ -635,9 +788,24 @@
     });
   }
 
-  function openAddClientModal() { currentClientId = null; document.getElementById('modalTitle').innerText = 'Add Client'; document.getElementById('modalBody').innerHTML = getClientFormHtml({}); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Client</button></div>`; document.getElementById('clientModal').style.display = 'flex'; attachClientModalEvents(true); }
+  function openAddClientModal() { 
+    currentClientId = null; 
+    document.getElementById('modalTitle').innerText = 'Add Client'; 
+    document.getElementById('modalBody').innerHTML = getClientFormHtml({}); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Client</button></div>`; 
+    document.getElementById('clientModal').style.display = 'flex'; 
+    attachClientModalEvents(true); 
+  }
   
-  function openEditClient(id) { currentClientId = id; const c = clients.find(c => c.id === id); document.getElementById('modalTitle').innerText = 'Edit Client'; document.getElementById('modalBody').innerHTML = getClientFormHtml(c); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; document.getElementById('clientModal').style.display = 'flex'; attachClientModalEvents(false); }
+  function openEditClient(id) { 
+    currentClientId = id; 
+    const c = clients.find(c => c.id === id); 
+    document.getElementById('modalTitle').innerText = 'Edit Client'; 
+    document.getElementById('modalBody').innerHTML = getClientFormHtml(c); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; 
+    document.getElementById('clientModal').style.display = 'flex'; 
+    attachClientModalEvents(false); 
+  }
 
   function getClientFormHtml(c) {
     return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
@@ -665,8 +833,8 @@
         status: document.getElementById('cStatus')?.value,
         address: document.getElementById('cAddress')?.value
       };
-      if(isAdd) addClient(data);
-      else updateClient(currentClientId, data);
+      if(isAdd) addClientLocal(data);
+      else updateClientLocal(currentClientId, data);
       document.getElementById('clientModal').style.display = 'none';
     });
   }
@@ -683,7 +851,13 @@
         let statusClass = 'status-pending';
         if(p.status === 'Live') statusClass = 'status-live';
         else if(p.status === 'In Progress') statusClass = 'status-progress';
-        html += `<tr><td><strong>${escapeHtml(p.name) || '-'}</strong></td><td><span class="project-status ${statusClass}">${p.status || 'Pending'}</span></td><td><div style="width:80px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;display:inline-block;margin-right:6px"><div style="width:${p.progress || 0}%;height:100%;background:#4f46e5;border-radius:2px"></div></div>${p.progress || 0}%</td><td>${p.deadline || '-'}</td><td>$${(p.budget || 0).toLocaleString()}</td></tr>`;
+        html += `<tr>
+          <td><strong>${escapeHtml(p.name) || '-'}</strong></td>
+          <td><span class="project-status ${statusClass}">${p.status || 'Pending'}</span></td>
+          <td><div style="width:80px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;display:inline-block;margin-right:6px"><div style="width:${p.progress || 0}%;height:100%;background:#4f46e5;border-radius:2px"></div></div>${p.progress || 0}%</div></td>
+          <td>${p.deadline || '-'}</td>
+          <td>$${(p.budget || 0).toLocaleString()}</td>
+        </tr>`;
       });
       html += '</tbody></table>';
       document.getElementById('projectsBody').innerHTML = html;
@@ -698,7 +872,7 @@
     const progress = parseInt(prompt('Progress % (0-100):', '0')) || 0;
     const deadline = prompt('Deadline (YYYY-MM-DD):', '');
     const budget = parseFloat(prompt('Budget ($):', '0')) || 0;
-    addProject(currentProjectsClientId, { name, status, progress, deadline, budget });
+    addProjectLocal(currentProjectsClientId, { name, status, progress, deadline, budget });
     openProjectsModal(currentProjectsClientId);
   }
 
@@ -711,9 +885,15 @@
     else {
       let html = '<table class="data-table"><thead><tr><th>INVOICE #</th><th>AMOUNT</th><th>DATE</th><th>DUE DATE</th><th>STATUS</th></tr></thead><tbody>';
       invoices.forEach(i => {
-        html += `<tr><td>${escapeHtml(i.number) || '-'}</td><td class="${i.status === 'Paid' ? 'invoice-paid' : 'invoice-pending'}">$${(i.amount || 0).toLocaleString()}</td><td>${i.date || '-'}</td><td>${i.dueDate || '-'}</td><td>${i.status || 'Pending'}</td></tr>`;
+        html += `<tr>
+          <td>${escapeHtml(i.number) || '-'}</td>
+          <td class="${i.status === 'Paid' ? 'invoice-paid' : 'invoice-pending'}">$${(i.amount || 0).toLocaleString()}</td>
+          <td>${i.date || '-'}</td>
+          <td>${i.dueDate || '-'}</td>
+          <td>${i.status || 'Pending'}</td>
+        </tr>`;
       });
-      html += '</tbody></table>';
+      html += '</tbody></tr>';
       document.getElementById('invoicesBody').innerHTML = html;
     }
     document.getElementById('invoicesModal').style.display = 'flex';
@@ -726,13 +906,31 @@
     const date = prompt('Date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
     const dueDate = prompt('Due Date (YYYY-MM-DD):', '');
     const status = prompt('Status (Paid / Pending / Overdue):', 'Pending');
-    addInvoice(currentInvoicesClientId, { number, amount, date, dueDate, status });
+    addInvoiceLocal(currentInvoicesClientId, { number, amount, date, dueDate, status });
     openInvoicesModal(currentInvoicesClientId);
   }
 
-  function updateDate() { document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+  function refreshData() {
+    document.getElementById('clientsContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Refreshing...</div>';
+    fetchClientsFromAPI();
+  }
+
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); 
+  }
+
+  // Filter chips
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter || 'all';
+      renderClients();
+    });
+  });
 
   document.getElementById('addClientBtn').onclick = openAddClientModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
   document.getElementById('closeModalBtn').onclick = () => document.getElementById('clientModal').style.display = 'none';
   document.getElementById('closeProjectsModalBtn').onclick = () => document.getElementById('projectsModal').style.display = 'none';
   document.getElementById('closeProjectsFooterBtn').onclick = () => document.getElementById('projectsModal').style.display = 'none';
@@ -742,9 +940,16 @@
   document.getElementById('addInvoiceBtn').onclick = addInvoiceToClient;
   document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
 
-  clients = getClients();
+  // Initial load
   updateDate();
-  renderAll();
+  fetchClientsFromAPI();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      fetchClientsFromAPI();
+    }
+  }, 60000);
 </script>
 </body>
 </html>

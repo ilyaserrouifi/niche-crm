@@ -169,6 +169,15 @@
     }
     .register-link a:hover { text-decoration: underline; }
 
+    /* Animation de chargement améliorée */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .loading {
+      animation: pulse 1s infinite;
+    }
+
     @media (max-width: 500px) {
       .login-card { padding: 32px 24px; }
       h1 { font-size: 24px; }
@@ -246,6 +255,12 @@
   const togglePassword = document.getElementById('togglePassword');
   const forgotLink = document.getElementById('forgotLink');
 
+  // Nettoyer les anciennes données si nécessaire
+  function clearOldSession() {
+    // Optionnel: garder seulement si on veut forcer une nouvelle session
+    // localStorage.removeItem('niche_token');
+  }
+
   // Toggle password visibility
   togglePassword.addEventListener('click', () => {
     const type = passwordInput.type === 'password' ? 'text' : 'password';
@@ -276,6 +291,14 @@
       return;
     }
 
+    // Validation email basique
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      errorMsg.textContent = 'Please enter a valid email address.';
+      errorMsg.classList.add('visible');
+      return;
+    }
+
     // Afficher le loader
     loginBtn.disabled = true;
     const btnSpan = loginBtn.querySelector('span');
@@ -301,6 +324,11 @@
         localStorage.setItem('niche_role', data.role);
         localStorage.setItem('niche_name', data.name);
         localStorage.setItem('niche_email', data.email);
+        
+        // Stocker l'avatar si disponible
+        if (data.avatar_initials) {
+          localStorage.setItem('niche_avatar_initials', data.avatar_initials);
+        }
 
         // Redirection vers le dashboard
         window.location.href = '/index.html';
@@ -314,7 +342,7 @@
       }
     } catch (error) {
       console.error('Login error:', error);
-      errorMsg.textContent = 'Connection error. Please try again.';
+      errorMsg.textContent = 'Connection error. Please check your internet and try again.';
       errorMsg.classList.add('visible');
       loginBtn.disabled = false;
       btnSpan.style.opacity = '1';

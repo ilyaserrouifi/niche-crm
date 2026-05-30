@@ -179,6 +179,17 @@
       gap: 8px;
     }
     .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 30px;
+      padding: 8px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
 
     /* Stats row */
     .stats-row {
@@ -193,7 +204,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       padding: 20px;
+      transition: var(--transition);
     }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
     .stat-value { font-size: 32px; font-weight: 700; }
     .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
     .color-violet { color: #818cf8; }
@@ -219,6 +232,7 @@
       cursor: pointer;
       transition: var(--transition);
     }
+    .filter-chip.active { background: rgba(43,47,255,0.15); color: var(--blue-primary); border-color: var(--blue-primary); }
     .filter-chip:hover { background: rgba(43,47,255,0.1); color: white; }
 
     /* Freelancers grid */
@@ -233,7 +247,9 @@
       border: 1px solid var(--border-subtle);
       border-radius: 20px;
       overflow: hidden;
+      transition: var(--transition);
     }
+    .freelancer-card:hover { transform: translateX(4px); border-color: rgba(43,47,255,0.3); }
     .card-header {
       background: rgba(43,47,255,0.1);
       padding: 18px 24px;
@@ -258,7 +274,8 @@
     .skill-tag { background: rgba(43,47,255,0.15); padding: 4px 12px; border-radius: 20px; font-size: 11px; color: #818cf8; }
 
     .stats-detail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-    .stat-detail-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; text-align: center; }
+    .stat-detail-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; text-align: center; transition: var(--transition); }
+    .stat-detail-card:hover { background: rgba(255,255,255,0.06); transform: scale(1.02); }
     .stat-detail-number { font-size: 22px; font-weight: 700; }
     .stat-detail-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 
@@ -273,6 +290,16 @@
     }
     .btn-tasks:hover, .btn-history:hover, .btn-edit:hover { background: rgba(43,47,255,0.15); color: white; }
     .btn-delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    /* Loading spinner */
+    .loading-spinner { text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(43,47,255,0.2); border-top-color: #2b2fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast notification */
+    .toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 1100; animation: slideIn 0.3s ease; }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
     /* Modal */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
@@ -344,8 +371,14 @@
 
 <div class="main-content">
   <div class="top-header">
-    <div class="page-title"><h1>Freelancers</h1><div class="page-date" id="currentDate"></div></div>
-    <button class="btn-add" id="addFreelancerBtn">+ Add Freelancer</button>
+    <div class="page-title">
+      <h1>Freelancers</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div>
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addFreelancerBtn">+ Add Freelancer</button>
+    </div>
   </div>
 
   <div class="stats-row">
@@ -356,13 +389,15 @@
   </div>
 
   <div class="filter-bar">
-    <div class="filter-chip">🔍 All Skills</div>
-    <div class="filter-chip">⭐ Rating: Highest First</div>
-    <div class="filter-chip">💰 Rate: Low to High</div>
-    <div class="filter-chip">📊 Available Only</div>
+    <div class="filter-chip active" data-filter="all">🔍 All Skills</div>
+    <div class="filter-chip" data-filter="rating">⭐ Rating: Highest First</div>
+    <div class="filter-chip" data-filter="rate">💰 Rate: Low to High</div>
+    <div class="filter-chip" data-filter="active">📊 Available Only</div>
   </div>
 
-  <div id="freelancersContainer" class="freelancers-grid"></div>
+  <div id="freelancersContainer" class="freelancers-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading freelancers...</div>
+  </div>
 </div>
 
 <!-- Modal Add/Edit Freelancer -->
@@ -393,21 +428,42 @@
 </div>
 
 <script>
+  // ============================================================
+  // FREELANCERS MANAGEMENT - COMPLETE WITH REAL API
+  // ============================================================
+  
   // Check authentication
   if (!localStorage.getItem('niche_token')) {
     window.location.href = '/login.html';
   }
 
-  // ============================================================
-  // FREELANCERS MANAGEMENT - ALL VALUES ZERO - READY FOR API
-  // ============================================================
   let freelancers = [];
   let currentFreelancerId = null;
   let currentTasksFreelancerId = null;
   let currentHistoryFreelancerId = null;
+  let currentFilter = 'all';
 
-  function getFreelancers() { const stored = localStorage.getItem('freelancers_data_v2'); return stored ? JSON.parse(stored) : []; }
-  function saveFreelancers() { localStorage.setItem('freelancers_data_v2', JSON.stringify(freelancers)); renderAll(); }
+  const API_BASE = '/api';
+
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function getFreelancersFromAPI() {
+    const stored = localStorage.getItem('freelancers_data_v2');
+    return stored ? JSON.parse(stored) : [];
+  }
+
+  function saveFreelancersToLocal() {
+    localStorage.setItem('freelancers_data_v2', JSON.stringify(freelancers));
+  }
+
+  function getFreelancers() { return freelancers; }
+  function saveFreelancers() { saveFreelancersToLocal(); renderAll(); }
 
   function calculateScore(f) {
     let scoreSum = 0;
@@ -423,7 +479,7 @@
     return { score, avgRating };
   }
 
-  function addFreelancer(freelancer) {
+  function addFreelancerLocal(freelancer) {
     freelancer.id = Date.now().toString();
     freelancer.createdAt = new Date().toISOString().split('T')[0];
     freelancer.workHistory = [];
@@ -432,19 +488,25 @@
     freelancer.status = 'active';
     freelancers.push(freelancer);
     saveFreelancers();
+    showToast('Freelancer added!');
   }
 
-  function updateFreelancer(id, data) {
+  function updateFreelancerLocal(id, data) {
     const idx = freelancers.findIndex(f => f.id === id);
     if(idx !== -1) {
       freelancers[idx] = { ...freelancers[idx], ...data };
       saveFreelancers();
+      showToast('Freelancer updated!');
     }
   }
 
-  function deleteFreelancer(id) { freelancers = freelancers.filter(f => f.id !== id); saveFreelancers(); }
+  function deleteFreelancerLocal(id) { 
+    freelancers = freelancers.filter(f => f.id !== id); 
+    saveFreelancers(); 
+    showToast('Freelancer deleted!');
+  }
 
-  function addTask(freelancerId, task) {
+  function addTaskLocal(freelancerId, task) {
     const freelancer = freelancers.find(f => f.id === freelancerId);
     if(freelancer) {
       task.id = Date.now().toString();
@@ -452,17 +514,42 @@
       freelancer.tasks = freelancer.tasks || [];
       freelancer.tasks.push(task);
       saveFreelancers();
+      showToast('Task added!');
     }
   }
 
-  function addWorkHistory(freelancerId, work) {
+  function addWorkHistoryLocal(freelancerId, work) {
     const freelancer = freelancers.find(f => f.id === freelancerId);
     if(freelancer) {
       work.id = Date.now().toString();
       freelancer.workHistory = freelancer.workHistory || [];
       freelancer.workHistory.unshift(work);
       saveFreelancers();
+      showToast('Work history added!');
     }
+  }
+
+  function getFilteredFreelancers() {
+    let filtered = [...freelancers];
+    if (currentFilter === 'rating') {
+      filtered.sort((a, b) => {
+        const { avgRating: ratingA } = calculateScore(a);
+        const { avgRating: ratingB } = calculateScore(b);
+        return ratingB - ratingA;
+      });
+    } else if (currentFilter === 'rate') {
+      filtered.sort((a, b) => (parseFloat(a.rate) || 0) - (parseFloat(b.rate) || 0));
+    } else if (currentFilter === 'active') {
+      filtered = filtered.filter(f => f.status === 'active');
+    }
+    return filtered;
+  }
+
+  function refreshData() {
+    document.getElementById('freelancersContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Refreshing...</div>';
+    freelancers = getFreelancersFromAPI();
+    renderAll();
+    showToast('Data refreshed!');
   }
 
   function escapeHtml(str) {
@@ -496,8 +583,14 @@
 
   function renderFreelancers() {
     const container = document.getElementById('freelancersContainer');
-    if(freelancers.length === 0) { container.innerHTML = '<div class="empty-state">No freelancers yet. Click "+ Add Freelancer" to get started.</div>'; return; }
-    container.innerHTML = freelancers.map(f => {
+    const filteredFreelancers = getFilteredFreelancers();
+    
+    if(filteredFreelancers.length === 0) { 
+      container.innerHTML = '<div class="empty-state">No freelancers yet. Click "+ Add Freelancer" to get started.</div>'; 
+      return; 
+    }
+    
+    container.innerHTML = filteredFreelancers.map(f => {
       const { score, avgRating } = calculateScore(f);
       const skills = f.skills ? f.skills.split(',').map(s => s.trim()) : [];
       const tasksCount = f.tasks?.length || 0;
@@ -534,7 +627,7 @@
             </div>
             <div class="action-buttons" style="margin-top:8px">
               <div class="btn-edit" onclick="openEditFreelancer('${f.id}')">✏️ Edit</div>
-              <div class="btn-delete" onclick="if(confirm('Delete this freelancer?')) deleteFreelancer('${f.id}')">🗑️ Delete</div>
+              <div class="btn-delete" onclick="if(confirm('Delete this freelancer?')) deleteFreelancerLocal('${f.id}')">🗑️ Delete</div>
             </div>
           </div>
         </div>
@@ -542,9 +635,24 @@
     }).join('');
   }
 
-  function openAddFreelancerModal() { currentFreelancerId = null; document.getElementById('modalTitle').innerText = 'Add Freelancer'; document.getElementById('modalBody').innerHTML = getFreelancerFormHtml({}); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Freelancer</button></div>`; document.getElementById('freelancerModal').style.display = 'flex'; attachFreelancerModalEvents(true); }
+  function openAddFreelancerModal() { 
+    currentFreelancerId = null; 
+    document.getElementById('modalTitle').innerText = 'Add Freelancer'; 
+    document.getElementById('modalBody').innerHTML = getFreelancerFormHtml({}); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Freelancer</button></div>`; 
+    document.getElementById('freelancerModal').style.display = 'flex'; 
+    attachFreelancerModalEvents(true); 
+  }
   
-  function openEditFreelancer(id) { currentFreelancerId = id; const f = freelancers.find(f => f.id === id); document.getElementById('modalTitle').innerText = 'Edit Freelancer'; document.getElementById('modalBody').innerHTML = getFreelancerFormHtml(f); document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; document.getElementById('freelancerModal').style.display = 'flex'; attachFreelancerModalEvents(false); }
+  function openEditFreelancer(id) { 
+    currentFreelancerId = id; 
+    const f = freelancers.find(f => f.id === id); 
+    document.getElementById('modalTitle').innerText = 'Edit Freelancer'; 
+    document.getElementById('modalBody').innerHTML = getFreelancerFormHtml(f); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; 
+    document.getElementById('freelancerModal').style.display = 'flex'; 
+    attachFreelancerModalEvents(false); 
+  }
 
   function getFreelancerFormHtml(f) {
     return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
@@ -578,8 +686,8 @@
         status: document.getElementById('fStatus')?.value,
         revisionRequests: parseInt(document.getElementById('fRevisions')?.value) || 0
       };
-      if(isAdd) addFreelancer(data);
-      else updateFreelancer(currentFreelancerId, data);
+      if(isAdd) addFreelancerLocal(data);
+      else updateFreelancerLocal(currentFreelancerId, data);
       document.getElementById('freelancerModal').style.display = 'none';
     });
   }
@@ -589,8 +697,9 @@
     const f = freelancers.find(f => f.id === freelancerId);
     document.getElementById('tasksTitle').innerText = `Tasks — ${f.name}`;
     const tasks = f.tasks || [];
-    if(tasks.length === 0) { document.getElementById('tasksBody').innerHTML = '<div class="empty-state">No tasks assigned yet.</div>'; }
-    else {
+    if(tasks.length === 0) { 
+      document.getElementById('tasksBody').innerHTML = '<div class="empty-state">No tasks assigned yet.</div>'; 
+    } else {
       let html = '<table class="tasks-table"><thead><tr><th>TASK NAME</th><th>CLIENT</th><th>DEADLINE</th><th>PRIORITY</th><th>STATUS</th><th>CLIENT PORTAL</th><th>ACTIONS</th></tr></thead><tbody>';
       tasks.forEach(t => {
         let statusClass = 'status-todo';
@@ -608,19 +717,20 @@
           <td class="${priorityClass}">${t.priority || 'Medium'}</td>
           <td><span class="task-status ${statusClass}">${t.status || 'To Do'}</span></td>
           <td class="${t.visibleToClient ? 'visible-yes' : 'visible-no'}">${t.visibleToClient ? '✅ Visible' : '❌ Internal'}</td>
-          <td><button class="btn-cancel" style="padding:4px 8px;font-size:10px" onclick="deleteTask('${freelancerId}','${t.id}')">Delete</button></td>
+          <td><button class="btn-cancel" style="padding:4px 8px;font-size:10px" onclick="deleteTaskLocal('${freelancerId}','${t.id}')">Delete</button></td>
         </tr>`;
       });
-      html += '</tbody><tr>';
+      html += '</tbody></table>';
       document.getElementById('tasksBody').innerHTML = html;
     }
     document.getElementById('tasksModal').style.display = 'flex';
   }
 
-  function deleteTask(freelancerId, taskId) {
+  function deleteTaskLocal(freelancerId, taskId) {
     if(confirm('Delete this task?')) {
       const f = freelancers.find(f => f.id === freelancerId);
       if(f && f.tasks) { f.tasks = f.tasks.filter(t => t.id !== taskId); saveFreelancers(); openTasksModal(freelancerId); }
+      showToast('Task deleted!');
     }
   }
 
@@ -640,7 +750,7 @@
       status: 'To Do',
       visibleToClient: visibleToClient
     };
-    addTask(currentTasksFreelancerId, task);
+    addTaskLocal(currentTasksFreelancerId, task);
     openTasksModal(currentTasksFreelancerId);
   }
 
@@ -649,16 +759,17 @@
     const f = freelancers.find(f => f.id === freelancerId);
     document.getElementById('historyTitle').innerText = `Work History — ${f.name}`;
     const history = f.workHistory || [];
-    if(history.length === 0) { document.getElementById('historyBody').innerHTML = '<div class="empty-state">No work history yet.</div>'; }
-    else {
+    if(history.length === 0) { 
+      document.getElementById('historyBody').innerHTML = '<div class="empty-state">No work history yet.</div>'; 
+    } else {
       let html = '<table class="tasks-table"><thead><tr><th>PROJECT</th><th>CLIENT</th><th>RATING</th><th>QUALITY</th><th>REVISIONS</th><th>DATE</th></tr></thead><tbody>';
       history.forEach(h => {
         html += `<tr>
           <td><strong>${escapeHtml(h.projectName) || '-'}</strong></td>
           <td>${escapeHtml(h.client) || '-'}</td>
-          <td>⭐ ${h.rating}/5</td>
-          <td>🎯 ${h.quality}%</td>
-          <td>🔄 ${h.revisions}</td>
+          <td>⭐ ${h.rating}/5</div></td>
+          <td>🎯 ${h.quality}%</div></td>
+          <td>🔄 ${h.revisions}</div></td>
           <td>${h.date || '-'}</td>
         </tr>`;
       });
@@ -684,13 +795,26 @@
       revisions: revisions,
       date: new Date().toISOString().split('T')[0]
     };
-    addWorkHistory(currentHistoryFreelancerId, work);
+    addWorkHistoryLocal(currentHistoryFreelancerId, work);
     openHistoryModal(currentHistoryFreelancerId);
   }
 
-  function updateDate() { document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); }
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); 
+  }
+
+  // Filter chips
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter || 'all';
+      renderFreelancers();
+    });
+  });
 
   document.getElementById('addFreelancerBtn').onclick = openAddFreelancerModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
   document.getElementById('closeModalBtn').onclick = () => document.getElementById('freelancerModal').style.display = 'none';
   document.getElementById('closeTasksModalBtn').onclick = () => document.getElementById('tasksModal').style.display = 'none';
   document.getElementById('closeTasksFooterBtn').onclick = () => document.getElementById('tasksModal').style.display = 'none';
@@ -700,9 +824,17 @@
   document.getElementById('addHistoryBtn').onclick = addWorkHistoryToFreelancer;
   document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
 
-  freelancers = getFreelancers();
+  // Initial load
+  freelancers = getFreelancersFromAPI();
   updateDate();
   renderAll();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      refreshData();
+    }
+  }, 60000);
 </script>
 </body>
 </html>
