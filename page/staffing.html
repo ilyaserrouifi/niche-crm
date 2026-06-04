@@ -556,10 +556,6 @@
 </div>
 
 <script>
-  // ============================================================
-  // STAFFING / TALENT MARKETPLACE - COMPLETE WITH REAL API
-  // ============================================================
-  
   if (!localStorage.getItem('niche_token')) {
     window.location.href = '/login.html';
   }
@@ -569,37 +565,19 @@
   let placements = [];
   let currentTab = 'freelancers';
   let currentFilter = 'all';
-
   const API_BASE = '/api';
 
   function showToast(message, type = 'success') {
     const toast = document.createElement('div');
-    toast.className = 	oast ;
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
     toast.textContent = message;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3000);
   }
 
-  async function fetchAllData() {
-    try {
-      const token = localStorage.getItem('niche_token');
-      const headers = { 'Authorization': Bearer  };
-      
-      const [freelancersRes, requestsRes, placementsRes] = await Promise.all([
-        fetch(${API_BASE}/freelancers, { headers }).catch(() => ({ ok: false })),
-        fetch(${API_BASE}/staffing/requests, { headers }).catch(() => ({ ok: false })),
-        fetch(${API_BASE}/staffing/placements, { headers }).catch(() => ({ ok: false }))
-      ]);
-      
-      if (freelancersRes.ok) freelancers = await freelancersRes.json();
-      if (requestsRes.ok) requests = await requestsRes.json();
-      if (placementsRes.ok) placements = await placementsRes.json();
-      
-      saveToLocal();
-      renderAll();
-    } catch (error) {
-      loadFromLocal();
-    }
+  function authHeaders(extra = {}) {
+    const token = localStorage.getItem('niche_token');
+    return { ...extra, Authorization: `Bearer ${token}` };
   }
 
   function saveToLocal() {
@@ -615,23 +593,37 @@
     renderAll();
   }
 
+  async function fetchAllData() {
+    try {
+      const [freelancersRes, requestsRes, placementsRes] = await Promise.all([
+        fetch(`${API_BASE}/freelancers`, { headers: authHeaders() }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/staffing/requests`, { headers: authHeaders() }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/staffing/placements`, { headers: authHeaders() }).catch(() => ({ ok: false }))
+      ]);
+
+      if (freelancersRes.ok) freelancers = await freelancersRes.json();
+      if (requestsRes.ok) requests = await requestsRes.json();
+      if (placementsRes.ok) placements = await placementsRes.json();
+      saveToLocal();
+      renderAll();
+    } catch (error) {
+      console.error('Staffing API error:', error);
+      loadFromLocal();
+    }
+  }
+
   async function addRequestToAPI(request) {
     try {
-      const token = localStorage.getItem('niche_token');
-      const response = await fetch(${API_BASE}/staffing/requests, {
+      const response = await fetch(`${API_BASE}/staffing/requests`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': Bearer  },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(request)
       });
-      if (response.ok) {
-        const newRequest = await response.json();
-        requests.push(newRequest);
-        saveToLocal();
-        renderAll();
-        showToast('Request added successfully!');
-      } else {
-        addRequestLocal(request);
-      }
+      if (!response.ok) throw new Error('API request failed');
+      requests.push(await response.json());
+      saveToLocal();
+      renderAll();
+      showToast('Request added successfully!');
     } catch (error) {
       addRequestLocal(request);
     }
@@ -648,18 +640,16 @@
   }
 
   async function createPlacement(freelancerId, requestId, budget) {
-    const freelancer = freelancers.find(f => f.id === freelancerId);
-    const request = requests.find(r => r.id === requestId);
+    const freelancer = freelancers.find(f => String(f.id) === String(freelancerId));
+    const request = requests.find(r => String(r.id) === String(requestId));
     if (!freelancer || !request) return;
-    
-    const ourProfit = budget * 0.25;
+
+    const ourProfit = Math.round(budget * 0.25);
     const freelancerEarn = budget - ourProfit;
-    
     const placement = {
-      id: Date.now().toString(),
       freelancerId,
-      freelancerName: freelancer.name,
       requestId,
+      freelancerName: freelancer.name || freelancer.full_name || 'Freelancer',
       companyName: request.companyName,
       budget,
       freelancerEarn,
@@ -667,42 +657,33 @@
       startDate: new Date().toISOString().split('T')[0],
       status: 'Active'
     };
-    
+
     try {
-      const token = localStorage.getItem('niche_token');
-      const response = await fetch(${API_BASE}/staffing/placements, {
+      const response = await fetch(`${API_BASE}/staffing/placements`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': Bearer  },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(placement)
       });
-      if (response.ok) {
-        const newPlacement = await response.json();
-        placements.push(newPlacement);
-        const reqIndex = requests.findIndex(r => r.id === requestId);
-        if (reqIndex !== -1) requests[reqIndex].status = 'Filled';
-        saveToLocal();
-        renderAll();
-        showToast(Placement created! Freelancer earns main{freelancerEarn}, Our profit main{ourProfit});
-      } else {
-        addPlacementLocal(placement);
-      }
+      if (!response.ok) throw new Error('API placement failed');
+      placements.push(await response.json());
+      const reqIndex = requests.findIndex(r => String(r.id) === String(requestId));
+      if (reqIndex !== -1) requests[reqIndex].status = 'Filled';
+      saveToLocal();
+      renderAll();
+      showToast(`Placement created! Freelancer earns $${freelancerEarn.toLocaleString()}, our profit $${ourProfit.toLocaleString()}`);
     } catch (error) {
-      addPlacementLocal(placement);
+      placements.push({ id: Date.now().toString(), ...placement });
+      const reqIndex = requests.findIndex(r => String(r.id) === String(requestId));
+      if (reqIndex !== -1) requests[reqIndex].status = 'Filled';
+      saveToLocal();
+      renderAll();
+      showToast('Placement created locally!');
     }
-  }
-
-  function addPlacementLocal(placement) {
-    placements.push(placement);
-    const reqIndex = requests.findIndex(r => r.id === placement.requestId);
-    if (reqIndex !== -1) requests[reqIndex].status = 'Filled';
-    saveToLocal();
-    renderAll();
-    showToast(Placement created locally!);
   }
 
   function getFilteredFreelancers() {
     if (currentFilter === 'all') return freelancers;
-    return freelancers.filter(f => f.skills && f.skills.toLowerCase().includes(currentFilter.toLowerCase()));
+    return freelancers.filter(f => String(f.skills || '').toLowerCase().includes(currentFilter.toLowerCase()));
   }
 
   function renderAll() {
@@ -716,13 +697,13 @@
     document.getElementById('totalFreelancers').innerText = freelancers.length;
     document.getElementById('activeRequests').innerText = requests.filter(r => r.status === 'Open').length;
     document.getElementById('totalPlacements').innerText = placements.length;
-    const totalComm = placements.reduce((sum, p) => sum + (p.ourProfit || 0), 0);
+    const totalComm = placements.reduce((sum, p) => sum + (parseFloat(p.ourProfit) || 0), 0);
     document.getElementById('totalCommission').innerText = '$' + totalComm.toLocaleString();
   }
 
   function escapeHtml(str) {
     if (!str) return '';
-    return str.replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+    return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
   }
 
   function renderFreelancers() {
@@ -732,19 +713,22 @@
       container.innerHTML = '<div class="empty-state">🎨 No freelancers found. Add freelancers from the Freelancers page.</div>';
       return;
     }
-    container.innerHTML = filtered.map(f => 
-      <div class="talent-card">
-        <div class="card-header"><h3></h3><div class="rating"></div></div>
-        <div class="card-body">
-          <div><strong></strong></div>
-          <div>💰 Rate: main{f.hourlyRate || 50}/hour or main{f.projectRate || 2000}/project</div>
-          <div>📊 Experience: </div>
-          <div>🌍 Timezone: </div>
-          <div class="commission-row"><strong>Our commission:</strong> 25% of project value</div>
-          <button class="btn-match" onclick="openMatchModal('')">🤝 Match with Request</button>
-        </div>
-      </div>
-    ).join('');
+    container.innerHTML = filtered.map(f => {
+      const name = f.name || f.full_name || 'Freelancer';
+      const rate = parseFloat(f.hourlyRate || f.salary || 50) || 50;
+      return `
+        <div class="talent-card">
+          <div class="card-header"><h3>${escapeHtml(name)}</h3><div class="rating">★ ${Number(f.rating || 0).toFixed(1)}</div></div>
+          <div class="card-body">
+            <div><strong>${escapeHtml(f.skills || 'General')}</strong></div>
+            <div>💰 Rate: $${rate.toLocaleString()}/hour</div>
+            <div>📊 Experience: ${escapeHtml(f.experience || 'Available')}</div>
+            <div>🌍 Timezone: ${escapeHtml(f.timezone || 'Flexible')}</div>
+            <div class="commission-row"><strong>Our commission:</strong> 25% of project value</div>
+            <button class="btn-match" onclick="openMatchModal('${f.id}')">🤝 Match with Request</button>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   function renderRequests() {
@@ -753,19 +737,19 @@
       container.innerHTML = '<div class="empty-state">📋 No talent requests yet. Click "+ New Request" to create one.</div>';
       return;
     }
-    container.innerHTML = requests.map(r => 
+    container.innerHTML = requests.map(r => `
       <div class="request-card">
-        <div class="card-header"><h3>🏢 </h3><div><span class="skill-tag"></span></div></div>
+        <div class="card-header"><h3>🏢 ${escapeHtml(r.companyName)}</h3><div><span class="skill-tag">${escapeHtml(r.skill)}</span></div></div>
         <div class="card-body">
-          <div><strong>Need:</strong> </div>
-          <div>📝 Description: </div>
-          <div class="price">💰 Budget: main{(r.budget || 0).toLocaleString()}</div>
-          <div>📅 Timeline: </div>
-          <div class="commission-row"><strong>Our commission (25%):</strong> main{Math.round((r.budget || 0) * 0.25).toLocaleString()}</div>
-          <button class="btn-match" onclick="openMatchForRequest('')">🔍 Find Talent</button>
+          <div><strong>Need:</strong> ${escapeHtml(r.skill || 'Talent')}</div>
+          <div>📝 Description: ${escapeHtml(r.description || '-')}</div>
+          <div class="price">💰 Budget: $${(parseFloat(r.budget) || 0).toLocaleString()}</div>
+          <div>📅 Timeline: ${escapeHtml(r.timeline || '-')}</div>
+          <div>Status: ${escapeHtml(r.status || 'Open')}</div>
+          <div class="commission-row"><strong>Our commission (25%):</strong> $${Math.round((parseFloat(r.budget) || 0) * 0.25).toLocaleString()}</div>
+          <button class="btn-match" onclick="openMatchForRequest('${r.id}')">🔍 Find Talent</button>
         </div>
-      </div>
-    ).join('');
+      </div>`).join('');
   }
 
   function renderPlacements() {
@@ -774,99 +758,93 @@
       container.innerHTML = '<div class="empty-state">🤝 No active placements yet. Match freelancers with requests to create placements.</div>';
       return;
     }
-    container.innerHTML = placements.map(p => 
+    container.innerHTML = placements.map(p => `
       <div class="placement-card">
-        <div class="card-header"><h3> → </h3><div><span class="skill-tag"></span></div></div>
+        <div class="card-header"><h3>${escapeHtml(p.freelancerName)} → ${escapeHtml(p.companyName)}</h3><div><span class="skill-tag">${escapeHtml(p.status || 'Active')}</span></div></div>
         <div class="card-body">
-          <div>💰 Client pays: <strong>main{(p.budget || 0).toLocaleString()}</strong></div>
-          <div>💵 Freelancer earns: <strong class="positive">main{(p.freelancerEarn || 0).toLocaleString()}</strong></div>
-          <div>🏆 Our profit (25%): <strong class="positive">main{(p.ourProfit || 0).toLocaleString()}</strong></div>
-          <div>📅 Started: </div>
-          <div class="commission-row"><strong>Monthly recurring:</strong> main{Math.round((p.budget || 0) * 0.25 / 12).toLocaleString()}/month</div>
+          <div>💰 Client pays: <strong>$${(parseFloat(p.budget) || 0).toLocaleString()}</strong></div>
+          <div>👤 Freelancer earns: $${(parseFloat(p.freelancerEarn) || 0).toLocaleString()}</div>
+          <div class="commission-row"><strong>Our profit:</strong> $${(parseFloat(p.ourProfit) || 0).toLocaleString()}</div>
+          <div>📅 Start: ${p.startDate || '-'}</div>
         </div>
-      </div>
-    ).join('');
+      </div>`).join('');
   }
 
   function openAddRequestModal() {
-    document.getElementById('modalBody').innerHTML = 
-      <div class="field-group"><label class="field-label">COMPANY NAME</label><input class="field-input" id="reqCompany"></div>
-      <div class="field-group"><label class="field-label">SKILL NEEDED</label><select class="field-select" id="reqSkill"><option>Design</option><option>Development</option><option>SEO</option><option>Ads</option><option>Content</option><option>Other</option></select></div>
-      <div class="field-group"><label class="field-label">BUDGET ($)</label><input class="field-input" type="number" id="reqBudget" value="0"></div>
-      <div class="field-group"><label class="field-label">TIMELINE</label><input class="field-input" id="reqTimeline" placeholder="e.g., 2 weeks, 1 month"></div>
-      <div class="field-group"><label class="field-label">DESCRIPTION</label><textarea class="field-textarea" id="reqDesc"></textarea></div>
-    ;
-    document.getElementById('modalFooter').innerHTML = <div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveRequestBtn">Create Request</button></div>;
+    document.getElementById('modalBody').innerHTML = `
+      <div class="field-group"><label class="field-label">COMPANY NAME *</label><input class="field-input" id="reqCompany"></div>
+      <div class="field-group"><label class="field-label">SKILL NEEDED</label><input class="field-input" id="reqSkill" placeholder="Design, Development, SEO..."></div>
+      <div class="field-group"><label class="field-label">BUDGET ($)</label><input class="field-input" type="number" id="reqBudget"></div>
+      <div class="field-group"><label class="field-label">TIMELINE</label><input class="field-input" id="reqTimeline" placeholder="2 weeks, 1 month..."></div>
+      <div class="field-group"><label class="field-label">DESCRIPTION</label><textarea class="field-textarea" id="reqDescription" rows="4"></textarea></div>`;
+    document.getElementById('modalFooter').innerHTML = '<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveRequestBtn">Create Request</button></div>';
     document.getElementById('requestModal').style.display = 'flex';
-    
+    document.getElementById('cancelModalBtn').onclick = closeModal;
+    document.getElementById('closeModalBtn').onclick = closeModal;
     document.getElementById('saveRequestBtn').onclick = () => {
       const data = {
-        companyName: document.getElementById('reqCompany')?.value,
-        skill: document.getElementById('reqSkill')?.value,
-        budget: parseFloat(document.getElementById('reqBudget')?.value) || 0,
-        timeline: document.getElementById('reqTimeline')?.value,
-        description: document.getElementById('reqDesc')?.value,
+        companyName: document.getElementById('reqCompany').value.trim(),
+        skill: document.getElementById('reqSkill').value.trim(),
+        budget: parseFloat(document.getElementById('reqBudget').value) || 0,
+        timeline: document.getElementById('reqTimeline').value.trim(),
+        description: document.getElementById('reqDescription').value.trim(),
         status: 'Open'
       };
-      if (!data.companyName) { showToast('Company name required!', 'error'); return; }
+      if (!data.companyName) return showToast('Company name required!', 'error');
       addRequestToAPI(data);
-      document.getElementById('requestModal').style.display = 'none';
+      closeModal();
     };
-    document.getElementById('cancelModalBtn').onclick = () => document.getElementById('requestModal').style.display = 'none';
-    document.getElementById('closeModalBtn').onclick = () => document.getElementById('requestModal').style.display = 'none';
   }
 
   function openMatchModal(freelancerId) {
     const openRequests = requests.filter(r => r.status === 'Open');
-    if (openRequests.length === 0) {
-      showToast('No open requests available. Create a request first!', 'error');
-      return;
-    }
-    const requestOptions = openRequests.map(r => <option value=""> -  (main{r.budget})</option>).join('');
-    document.getElementById('modalBody').innerHTML = 
-      <div class="field-group"><label class="field-label">SELECT REQUEST</label><select class="field-select" id="matchRequest"></select></div>
+    if (openRequests.length === 0) return showToast('No open requests available!', 'error');
+    const requestOptions = openRequests.map(r => `<option value="${r.id}">${escapeHtml(r.companyName)} - ${escapeHtml(r.skill)} ($${(parseFloat(r.budget) || 0).toLocaleString()})</option>`).join('');
+    document.getElementById('modalBody').innerHTML = `
+      <div class="field-group"><label class="field-label">SELECT REQUEST</label><select class="field-select" id="matchRequest">${requestOptions}</select></div>
       <div class="field-group"><label class="field-label">FINAL BUDGET ($)</label><input class="field-input" type="number" id="matchBudget" placeholder="Enter agreed budget"></div>
-      <div class="commission-row"><strong>Calculations:</strong><br>Client pays: $<span id="calcBudget">0</span><br>Freelancer earns (75%): $<span id="calcFreelancer">0</span><br>Our profit (25%): $<span id="calcProfit">0</span></div>
-    ;
-    document.getElementById('modalFooter').innerHTML = <div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="confirmMatchBtn">Create Placement</button></div>;
+      <div class="commission-row"><strong>Calculations:</strong><br>Client pays: $<span id="calcBudget">0</span><br>Freelancer earns (75%): $<span id="calcFreelancer">0</span><br>Our profit (25%): $<span id="calcProfit">0</span></div>`;
+    document.getElementById('modalFooter').innerHTML = '<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="confirmMatchBtn">Create Placement</button></div>';
     document.getElementById('requestModal').style.display = 'flex';
-    
-    const budgetInput = document.getElementById('matchBudget');
-    budgetInput.oninput = () => {
-      const budget = parseFloat(budgetInput.value) || 0;
-      document.getElementById('calcBudget').innerText = budget.toLocaleString();
-      document.getElementById('calcFreelancer').innerText = (budget * 0.75).toLocaleString();
-      document.getElementById('calcProfit').innerText = (budget * 0.25).toLocaleString();
-    };
-    
+    wireBudgetCalculator();
     document.getElementById('confirmMatchBtn').onclick = () => {
-      const requestId = document.getElementById('matchRequest')?.value;
-      const budget = parseFloat(budgetInput?.value) || 0;
-      if (!requestId || budget <= 0) { showToast('Please select request and enter budget', 'error'); return; }
+      const requestId = document.getElementById('matchRequest').value;
+      const budget = parseFloat(document.getElementById('matchBudget').value) || 0;
+      if (!requestId || budget <= 0) return showToast('Please select request and enter budget', 'error');
       createPlacement(freelancerId, requestId, budget);
-      document.getElementById('requestModal').style.display = 'none';
+      closeModal();
     };
-    document.getElementById('cancelModalBtn').onclick = () => document.getElementById('requestModal').style.display = 'none';
-    document.getElementById('closeModalBtn').onclick = () => document.getElementById('requestModal').style.display = 'none';
+    document.getElementById('cancelModalBtn').onclick = closeModal;
+    document.getElementById('closeModalBtn').onclick = closeModal;
   }
 
   function openMatchForRequest(requestId) {
-    const request = requests.find(r => r.id === requestId);
+    const request = requests.find(r => String(r.id) === String(requestId));
     if (!request) return;
-    const availableFreelancers = freelancers.filter(f => f.skills && f.skills.toLowerCase().includes(request.skill.toLowerCase()));
-    if (availableFreelancers.length === 0) {
-      showToast(No freelancers found with  skills!, 'error');
-      return;
-    }
-    const freelancerOptions = availableFreelancers.map(f => <option value=""> - main{f.hourlyRate || 50}/hr (Rating: ★)</option>).join('');
-    document.getElementById('modalBody').innerHTML = 
-      <div class="field-group"><label class="field-label">SELECT FREELANCER</label><select class="field-select" id="matchFreelancer"></select></div>
-      <div class="field-group"><label class="field-label">FINAL BUDGET ($)</label><input class="field-input" type="number" id="matchBudget" value=""></div>
-      <div class="commission-row"><strong>Calculations:</strong><br>Client pays: $<span id="calcBudget"></span><br>Freelancer earns (75%): $<span id="calcFreelancer"></span><br>Our profit (25%): $<span id="calcProfit"></span></div>
-    ;
-    document.getElementById('modalFooter').innerHTML = <div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="confirmMatchBtn">Create Placement</button></div>;
+    const availableFreelancers = freelancers.filter(f => String(f.skills || '').toLowerCase().includes(String(request.skill || '').toLowerCase()));
+    const list = availableFreelancers.length ? availableFreelancers : freelancers;
+    if (list.length === 0) return showToast('No freelancers found!', 'error');
+    const freelancerOptions = list.map(f => `<option value="${f.id}">${escapeHtml(f.name || f.full_name)} - $${parseFloat(f.hourlyRate || f.salary || 50).toLocaleString()}/hr (★ ${Number(f.rating || 0).toFixed(1)})</option>`).join('');
+    document.getElementById('modalBody').innerHTML = `
+      <div class="field-group"><label class="field-label">SELECT FREELANCER</label><select class="field-select" id="matchFreelancer">${freelancerOptions}</select></div>
+      <div class="field-group"><label class="field-label">FINAL BUDGET ($)</label><input class="field-input" type="number" id="matchBudget" value="${parseFloat(request.budget) || 0}"></div>
+      <div class="commission-row"><strong>Calculations:</strong><br>Client pays: $<span id="calcBudget">0</span><br>Freelancer earns (75%): $<span id="calcFreelancer">0</span><br>Our profit (25%): $<span id="calcProfit">0</span></div>`;
+    document.getElementById('modalFooter').innerHTML = '<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="confirmMatchBtn">Create Placement</button></div>';
     document.getElementById('requestModal').style.display = 'flex';
-    
+    wireBudgetCalculator();
+    document.getElementById('matchBudget').dispatchEvent(new Event('input'));
+    document.getElementById('confirmMatchBtn').onclick = () => {
+      const freelancerId = document.getElementById('matchFreelancer').value;
+      const budget = parseFloat(document.getElementById('matchBudget').value) || 0;
+      if (!freelancerId || budget <= 0) return showToast('Please select freelancer and enter budget', 'error');
+      createPlacement(freelancerId, requestId, budget);
+      closeModal();
+    };
+    document.getElementById('cancelModalBtn').onclick = closeModal;
+    document.getElementById('closeModalBtn').onclick = closeModal;
+  }
+
+  function wireBudgetCalculator() {
     const budgetInput = document.getElementById('matchBudget');
     budgetInput.oninput = () => {
       const budget = parseFloat(budgetInput.value) || 0;
@@ -874,17 +852,9 @@
       document.getElementById('calcFreelancer').innerText = (budget * 0.75).toLocaleString();
       document.getElementById('calcProfit').innerText = (budget * 0.25).toLocaleString();
     };
-    
-    document.getElementById('confirmMatchBtn').onclick = () => {
-      const freelancerId = document.getElementById('matchFreelancer')?.value;
-      const budget = parseFloat(budgetInput?.value) || 0;
-      if (!freelancerId || budget <= 0) { showToast('Please select freelancer and enter budget', 'error'); return; }
-      createPlacement(freelancerId, requestId, budget);
-      document.getElementById('requestModal').style.display = 'none';
-    };
-    document.getElementById('cancelModalBtn').onclick = () => document.getElementById('requestModal').style.display = 'none';
-    document.getElementById('closeModalBtn').onclick = () => document.getElementById('requestModal').style.display = 'none';
   }
+
+  function closeModal() { document.getElementById('requestModal').style.display = 'none'; }
 
   function switchTab(tab) {
     currentTab = tab;
@@ -906,6 +876,7 @@
   document.getElementById('addRequestBtn').onclick = openAddRequestModal;
   document.getElementById('refreshBtn').onclick = refreshData;
   document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+  document.getElementById('closeModalBtn').onclick = closeModal;
   document.querySelectorAll('.tab-btn').forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
   document.querySelectorAll('.filter-chip').forEach(chip => {
     chip.onclick = () => {

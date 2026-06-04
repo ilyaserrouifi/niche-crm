@@ -153,3 +153,82 @@ CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON projects FOR EACH ROW
 
 DROP TRIGGER IF EXISTS update_tasks_updated_at ON tasks;
 CREATE TRIGGER update_tasks_updated_at BEFORE UPDATE ON tasks FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Tables CRM additionnelles utilisées par les pages frontend
+CREATE TABLE IF NOT EXISTS clients (
+    id SERIAL PRIMARY KEY,
+    company VARCHAR(255) NOT NULL,
+    contact VARCHAR(255),
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    niche VARCHAR(100),
+    budget DECIMAL(12,2) DEFAULT 0,
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS staffing_requests (
+    id SERIAL PRIMARY KEY,
+    company_name VARCHAR(255) NOT NULL,
+    skill VARCHAR(120),
+    description TEXT,
+    budget DECIMAL(12,2) DEFAULT 0,
+    timeline VARCHAR(120),
+    status VARCHAR(50) DEFAULT 'Open',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS placements (
+    id SERIAL PRIMARY KEY,
+    freelancer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    request_id INTEGER REFERENCES staffing_requests(id) ON DELETE SET NULL,
+    freelancer_name VARCHAR(255),
+    company_name VARCHAR(255),
+    budget DECIMAL(12,2) DEFAULT 0,
+    freelancer_earn DECIMAL(12,2) DEFAULT 0,
+    our_profit DECIMAL(12,2) DEFAULT 0,
+    start_date DATE DEFAULT CURRENT_DATE,
+    status VARCHAR(50) DEFAULT 'Active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255),
+    message TEXT,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS time_tracking (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_time TIMESTAMP,
+    duration_seconds INTEGER DEFAULT 0,
+    is_idle BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS screen_sessions (
+    id SERIAL PRIMARY KEY,
+    freelancer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    end_time TIMESTAMP,
+    duration_seconds INTEGER DEFAULT 0,
+    recording_url TEXT,
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS twilio_call_sid VARCHAR(100);
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'completed';
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS start_time TIMESTAMP;
+ALTER TABLE calls ADD COLUMN IF NOT EXISTS end_time TIMESTAMP;
+
+CREATE INDEX IF NOT EXISTS idx_clients_status ON clients(status);
+CREATE INDEX IF NOT EXISTS idx_staffing_requests_status ON staffing_requests(status);
+CREATE INDEX IF NOT EXISTS idx_screen_sessions_freelancer ON screen_sessions(freelancer_id);

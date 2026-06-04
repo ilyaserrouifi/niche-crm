@@ -120,3 +120,16 @@ UNION ALL
 SELECT 'Invoices', COUNT(*) FROM invoices
 UNION ALL
 SELECT 'Expenses', COUNT(*) FROM expenses;
+-- ============================================================
+-- 9. CLIENTS TABLE + STAFFING DEMO DATA
+-- ============================================================
+INSERT INTO clients (company, contact, email, phone, niche, budget, status) VALUES
+('Atlas Growth Studio', 'Sara Bennani', 'sara@atlasgrowth.test', '+212600000001', 'Marketing', 12000, 'active'),
+('Northwind Dental', 'Adam Clark', 'adam@northwind.test', '+15550000002', 'Healthcare', 8500, 'active'),
+('SaaS Pilot', 'Maya Stone', 'maya@saaspilot.test', '+15550000003', 'SaaS', 16000, 'pending')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO staffing_requests (company_name, skill, description, budget, timeline, status) VALUES
+('Atlas Growth Studio', 'Design', 'Landing page redesign and brand assets', 3000, '2 weeks', 'Open'),
+('Northwind Dental', 'SEO', 'Local SEO campaign and monthly reporting', 1800, '1 month', 'Open')
+ON CONFLICT DO NOTHING;

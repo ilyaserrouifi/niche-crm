@@ -12,8 +12,11 @@ async function matchFreelancers(project) {
             SELECT * FROM users 
             WHERE role = 'freelancer' 
             AND status = 'active'
-            AND (skills ILIKE $1 OR specialization ILIKE $1)
-        `, [`%${skill}%`]);
+            AND ($1 = '' OR EXISTS (
+                SELECT 1 FROM unnest(COALESCE(skills, ARRAY[]::text[])) AS user_skill
+                WHERE user_skill ILIKE $2
+            ))
+        `, [skill || '', `%${skill || ''}%`]);
         
         // 2. Trier par rating
         freelancers.rows.sort((a, b) => (b.rating || 0) - (a.rating || 0));

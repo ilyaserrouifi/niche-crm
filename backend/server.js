@@ -46,6 +46,162 @@ const buildAuthResponse = (user) => ({
     avatar_initials: user.avatar_initials || (user.full_name || 'U').slice(0, 2).toUpperCase()
 });
 
+
+const normalizeStageForClient = (stage = 'lead') => String(stage || 'lead').toLowerCase().replace('closed_won', 'won').replace('closed_lost', 'lost').replace('negotiating', 'negotiation');
+const normalizeStageForDb = (stage = 'lead') => {
+    const normalized = normalizeStageForClient(stage);
+    const stages = {
+        lead: 'LEAD', contacted: 'CONTACTED', meeting: 'MEETING', qualified: 'QUALIFIED',
+        proposal: 'PROPOSAL', negotiation: 'NEGOTIATING', won: 'WON', lost: 'LOST'
+    };
+    return stages[normalized] || 'LEAD';
+};
+
+const mapDeal = (row) => ({
+    id: String(row.id),
+    company: row.company || row.company_name || 'Unnamed',
+    contact: row.contact || row.contact_name || '',
+    email: row.email || row.contact_email || '',
+    phone: row.phone || row.contact_phone || '',
+    source: row.source || '',
+    niche: row.niche || '',
+    value: Number(row.value ?? row.deal_value ?? row.estimated_value ?? 0),
+    expectedClose: row.expected_close || row.expectedClose || row.proposal_date || '',
+    assignedTo: row.assigned_to_name || row.assignedTo || '',
+    stage: normalizeStageForClient(row.stage),
+    createdAt: row.created_at || row.createdAt || null,
+    country: row.country || '',
+    lat: row.lat,
+    lng: row.lng
+});
+
+const mapClient = (row) => ({
+    id: String(row.id),
+    company: row.company || row.company_name || row.full_name || row.name || 'Unnamed',
+    contact: row.contact || row.contact_name || row.full_name || row.name || '',
+    email: row.email || row.contact_email || '',
+    phone: row.phone || '',
+    niche: row.niche || '',
+    budget: Number(row.budget || 0),
+    status: row.status || 'active',
+    createdAt: row.created_at ? new Date(row.created_at).toISOString().slice(0, 10) : (row.createdAt || ''),
+    projects: row.projects || [],
+    invoices: row.invoices || []
+});
+
+const mapProject = (row) => ({
+    id: String(row.id),
+    name: row.name || row.project_name || '',
+    client: row.client || row.client_name || '',
+    description: row.description || '',
+    startDate: row.start_date || row.startDate || '',
+    endDate: row.end_date || row.endDate || '',
+    budget: Number(row.budget || 0),
+    status: row.status || 'active',
+    progress: Number(row.progress || 0),
+    createdAt: row.created_at ? new Date(row.created_at).toISOString().slice(0, 10) : (row.createdAt || ''),
+    tasks: row.tasks || [],
+    deliverables: row.deliverables || []
+});
+
+const mapTask = (row) => ({
+    id: String(row.id),
+    name: row.name || row.task_name || '',
+    client: row.client || row.project_name || '',
+    projectId: row.project_id ? String(row.project_id) : '',
+    assignedTo: row.assignedTo || row.assigned_to_name || row.assigned_to || '',
+    deadline: row.deadline || row.due_date || '',
+    priority: row.priority || 'Medium',
+    status: row.status || 'To Do',
+    visibleToClient: row.visibleToClient ?? row.visible_to_client ?? false,
+    description: row.description || '',
+    updates: row.updates || [],
+    attachments: row.attachments || [],
+    createdAt: row.created_at || row.createdAt || null
+});
+
+const ensureDatabaseSchema = async () => {
+    const statements = [
+        `CREATE TABLE IF NOT EXISTS clients (
+            id SERIAL PRIMARY KEY,
+            company VARCHAR(255) NOT NULL,
+            contact VARCHAR(255),
+            email VARCHAR(255),
+            phone VARCHAR(50),
+            niche VARCHAR(100),
+            budget DECIMAL(12,2) DEFAULT 0,
+            status VARCHAR(50) DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS staffing_requests (
+            id SERIAL PRIMARY KEY,
+            company_name VARCHAR(255) NOT NULL,
+            skill VARCHAR(120),
+            description TEXT,
+            budget DECIMAL(12,2) DEFAULT 0,
+            timeline VARCHAR(120),
+            status VARCHAR(50) DEFAULT 'Open',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS placements (
+            id SERIAL PRIMARY KEY,
+            freelancer_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            request_id INTEGER REFERENCES staffing_requests(id) ON DELETE SET NULL,
+            freelancer_name VARCHAR(255),
+            company_name VARCHAR(255),
+            budget DECIMAL(12,2) DEFAULT 0,
+            freelancer_earn DECIMAL(12,2) DEFAULT 0,
+            our_profit DECIMAL(12,2) DEFAULT 0,
+            start_date DATE DEFAULT CURRENT_DATE,
+            status VARCHAR(50) DEFAULT 'Active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS notifications (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            title VARCHAR(255),
+            message TEXT,
+            is_read BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS time_tracking (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            end_time TIMESTAMP,
+            duration_seconds INTEGER DEFAULT 0,
+            is_idle BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `CREATE TABLE IF NOT EXISTS screen_sessions (
+            id SERIAL PRIMARY KEY,
+            freelancer_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            end_time TIMESTAMP,
+            duration_seconds INTEGER DEFAULT 0,
+            recording_url TEXT,
+            status VARCHAR(50) DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )`,
+        `ALTER TABLE calls ADD COLUMN IF NOT EXISTS twilio_call_sid VARCHAR(100)`,
+        `ALTER TABLE calls ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'completed'`,
+        `ALTER TABLE calls ADD COLUMN IF NOT EXISTS start_time TIMESTAMP`,
+        `ALTER TABLE calls ADD COLUMN IF NOT EXISTS end_time TIMESTAMP`,
+        `UPDATE calls SET start_time = COALESCE(start_time, call_time) WHERE start_time IS NULL`
+    ];
+
+    for (const statement of statements) {
+        await pool.query(statement);
+    }
+};
+
+ensureDatabaseSchema().catch((error) => {
+    console.warn('⚠️ Database schema bootstrap skipped:', error.message);
+});
+
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
@@ -200,6 +356,15 @@ app.get('/api/users/me', authenticateToken, async (req, res) => {
     }
 });
 
+app.post('/api/users/avatar', authenticateToken, upload.single('avatar'), async (req, res) => {
+    try {
+        const initials = (req.body.avatar_initials || req.body.initials || 'U').slice(0, 2).toUpperCase();
+        res.json({ success: true, avatar_initials: initials, message: 'Avatar uploaded' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 app.put('/api/users/me', authenticateToken, async (req, res) => {
     const { full_name, username, phone } = req.body;
     try {
@@ -232,57 +397,297 @@ app.get('/api/users', authenticateToken, async (req, res) => {
 // Clients
 app.get('/api/clients', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query("SELECT * FROM clients ORDER BY id DESC");
+        const [clientRows, projectRows, invoiceRows] = await Promise.all([
+            pool.query('SELECT * FROM clients ORDER BY created_at DESC'),
+            pool.query('SELECT * FROM projects ORDER BY created_at DESC'),
+            pool.query('SELECT * FROM invoices ORDER BY created_at DESC')
+        ]);
+
+        const clients = clientRows.rows.map((client) => {
+            const mapped = mapClient(client);
+            mapped.projects = projectRows.rows
+                .filter((project) => String(project.client_id || '') === String(client.id))
+                .map(mapProject);
+            mapped.invoices = invoiceRows.rows
+                .filter((invoice) => String(invoice.client_id || '') === String(client.id))
+                .map((invoice) => ({ ...invoice, amount: Number(invoice.amount || 0) }));
+            return mapped;
+        });
+
+        res.json(clients);
+    } catch (error) {
+        console.error('Clients error:', error);
+        res.status(500).json({ message: error.message });
+    }
+});
+
+
+app.get('/api/clients/:id', authenticateToken, async (req, res) => {
+    if (!/^\d+$/.test(String(req.params.id))) return res.json(mapClient({ id: req.params.id, company: 'Demo Client', contact: 'Client Portal', status: 'active' }));
+    try {
+        const result = await pool.query('SELECT * FROM clients WHERE id = $1', [req.params.id]);
+        if (!result.rows.length) return res.status(404).json({ message: 'Client not found' });
+        res.json(mapClient(result.rows[0]));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.get('/api/clients/:id/projects', authenticateToken, async (req, res) => {
+    if (!/^\d+$/.test(String(req.params.id))) return res.json([]);
+    try {
+        const result = await pool.query('SELECT * FROM projects WHERE client_id = $1 ORDER BY created_at DESC', [req.params.id]);
+        res.json(result.rows.map(mapProject));
+    } catch (error) {
+        res.json([]);
+    }
+});
+
+app.get('/api/clients/:id/invoices', authenticateToken, async (req, res) => {
+    if (!/^\d+$/.test(String(req.params.id))) return res.json([]);
+    try {
+        const result = await pool.query('SELECT * FROM invoices WHERE client_id = $1 ORDER BY created_at DESC', [req.params.id]);
+        res.json(result.rows.map((invoice) => ({ ...invoice, amount: Number(invoice.amount || 0) })));
+    } catch (error) {
+        res.json([]);
+    }
+});
+
+app.get('/api/clients/:id/team', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query("SELECT id, full_name AS name, role, email FROM users WHERE role IN ('admin', 'freelancer', 'caller', 'outreacher') ORDER BY role, full_name LIMIT 12");
         res.json(result.rows);
-    } catch (error) { 
-        res.status(500).json({ message: error.message }); 
+    } catch (error) {
+        res.json([]);
+    }
+});
+
+app.post('/api/clients', authenticateToken, async (req, res) => {
+    const { company, contact, email, phone, niche, budget, status } = req.body;
+    if (!company) return res.status(400).json({ message: 'Company is required' });
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO clients (company, contact, email, phone, niche, budget, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING *`,
+            [company, contact || null, email || null, phone || null, niche || null, budget || 0, status || 'active']
+        );
+        res.status(201).json(mapClient(result.rows[0]));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.put('/api/clients/:id', authenticateToken, async (req, res) => {
+    const { company, contact, email, phone, niche, budget, status } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE clients
+             SET company = COALESCE($1, company), contact = COALESCE($2, contact), email = COALESCE($3, email),
+                 phone = COALESCE($4, phone), niche = COALESCE($5, niche), budget = COALESCE($6, budget),
+                 status = COALESCE($7, status), updated_at = NOW()
+             WHERE id = $8 RETURNING *`,
+            [company || null, contact || null, email || null, phone || null, niche || null, budget ?? null, status || null, req.params.id]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ message: 'Client not found' });
+        res.json(mapClient(result.rows[0]));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.delete('/api/clients/:id', authenticateToken, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM clients WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
 
 // Projects
 app.get('/api/projects', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM projects ORDER BY created_at DESC');
-        res.json(result.rows);
-    } catch (error) { 
-        res.status(500).json({ message: error.message }); 
+        const result = await pool.query(`
+            SELECT p.*, c.company AS client_name
+            FROM projects p
+            LEFT JOIN clients c ON c.id = p.client_id
+            ORDER BY p.created_at DESC
+        `);
+        res.json(result.rows.map(mapProject));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.post('/api/projects', authenticateToken, async (req, res) => {
+    const { name, project_name, client, description, startDate, endDate, budget, status, progress } = req.body;
+    const projectName = name || project_name;
+    if (!projectName) return res.status(400).json({ message: 'Project name is required' });
+
+    try {
+        let clientId = null;
+        if (client) {
+            const found = await pool.query('SELECT id FROM clients WHERE company ILIKE $1 LIMIT 1', [client]);
+            if (found.rows.length) clientId = found.rows[0].id;
+        }
+        const result = await pool.query(
+            `INSERT INTO projects (client_id, project_name, description, start_date, end_date, budget, status, progress)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [clientId, projectName, description || null, startDate || null, endDate || null, budget || 0, status || 'active', progress || 0]
+        );
+        res.status(201).json(mapProject({ ...result.rows[0], client_name: client || '' }));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.get('/api/projects/:projectId/tasks', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT t.*, p.project_name, u.full_name AS assigned_to_name
+            FROM tasks t
+            LEFT JOIN projects p ON p.id = t.project_id
+            LEFT JOIN users u ON u.id = t.assigned_to
+            WHERE t.project_id = $1
+            ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC
+        `, [req.params.projectId]);
+        res.json(result.rows.map(mapTask));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.post('/api/projects/:projectId/tasks', authenticateToken, async (req, res) => {
+    const { name, task_name, assigned_to, description, priority, status, deadline, due_date, visibleToClient, visible_to_client } = req.body;
+    const taskName = name || task_name;
+    if (!taskName) return res.status(400).json({ message: 'Task name is required' });
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO tasks (task_name, project_id, assigned_to, description, priority, status, due_date, visible_to_client)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [taskName, req.params.projectId, assigned_to || null, description || null, priority || 'Medium', status || 'To Do', deadline || due_date || null, visibleToClient ?? visible_to_client ?? false]
+        );
+        res.status(201).json(mapTask(result.rows[0]));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
 
 // Tasks
 app.get('/api/tasks', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM tasks ORDER BY deadline ASC, created_at DESC');
-        res.json(result.rows);
-    } catch (error) { 
-        res.status(500).json({ message: error.message }); 
+        const result = await pool.query(`
+            SELECT t.*, p.project_name, u.full_name AS assigned_to_name
+            FROM tasks t
+            LEFT JOIN projects p ON p.id = t.project_id
+            LEFT JOIN users u ON u.id = t.assigned_to
+            ORDER BY t.due_date ASC NULLS LAST, t.created_at DESC
+        `);
+        res.json(result.rows.map(mapTask));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.post('/api/tasks', authenticateToken, async (req, res) => {
+    const { name, task_name, client, project_id, assigned_to, description, priority, status, deadline, due_date, visibleToClient, visible_to_client } = req.body;
+    const taskName = name || task_name;
+    if (!taskName) return res.status(400).json({ message: 'Task name is required' });
+
+    try {
+        let projectId = project_id || null;
+        if (!projectId && client) {
+            const found = await pool.query('SELECT id FROM projects WHERE project_name ILIKE $1 LIMIT 1', [client]);
+            if (found.rows.length) projectId = found.rows[0].id;
+        }
+        const result = await pool.query(
+            `INSERT INTO tasks (task_name, project_id, assigned_to, description, priority, status, due_date, visible_to_client)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [taskName, projectId, assigned_to || null, description || null, priority || 'Medium', status || 'To Do', deadline || due_date || null, visibleToClient ?? visible_to_client ?? false]
+        );
+        res.status(201).json(mapTask({ ...result.rows[0], project_name: client || '' }));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.put('/api/tasks/:id/status', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('UPDATE tasks SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *', [req.body.status, req.params.id]);
+        if (result.rows.length === 0) return res.status(404).json({ message: 'Task not found' });
+        res.json(mapTask(result.rows[0]));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
 
 // Finance
 app.get('/api/finance/invoices', authenticateToken, async (req, res) => {
-    try { 
-        const r = await pool.query('SELECT * FROM invoices ORDER BY created_at DESC'); 
-        res.json(r.rows); 
-    } catch(e) { 
-        res.json([]); 
+    try {
+        const r = await pool.query('SELECT * FROM invoices ORDER BY created_at DESC');
+        res.json(r.rows.map((invoice) => ({ ...invoice, amount: Number(invoice.amount || 0) })));
+    } catch(e) {
+        res.json([]);
     }
 });
 
 app.get('/api/finance/expenses', authenticateToken, async (req, res) => {
-    try { 
-        const r = await pool.query('SELECT * FROM expenses ORDER BY expense_date DESC'); 
-        res.json(r.rows); 
-    } catch(e) { 
-        res.json([]); 
+    try {
+        const r = await pool.query('SELECT * FROM expenses ORDER BY expense_date DESC');
+        res.json(r.rows.map((expense) => ({ ...expense, amount: Number(expense.amount || 0) })));
+    } catch(e) {
+        res.json([]);
     }
 });
 
 // Pipeline & Kanban
-app.get('/api/pipeline', authenticateToken, async (req, res) => {
+app.get(['/api/pipeline', '/api/pipeline/deals', '/api/leads'], authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM leads ORDER BY created_at DESC');
-        res.json(result.rows);
+        const result = await pool.query(`
+            SELECT l.*, u.full_name AS assigned_to_name
+            FROM leads l
+            LEFT JOIN users u ON u.id = l.assigned_to
+            ORDER BY l.created_at DESC
+        `);
+        res.json(result.rows.map(mapDeal));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.post(['/api/pipeline/deals', '/api/pipeline/leads', '/api/leads'], authenticateToken, async (req, res) => {
+    const { company, contact, email, phone, source, niche, value, expectedClose, stage, assigned_to } = req.body;
+    if (!company) return res.status(400).json({ message: 'Company is required' });
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO leads (company_name, contact_name, contact_email, contact_phone, source, niche, estimated_value, proposal_date, stage, assigned_to)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+            [company, contact || null, email || null, phone || null, source || null, niche || null, value || 0, expectedClose || null, normalizeStageForDb(stage), assigned_to || null]
+        );
+        res.status(201).json(mapDeal(result.rows[0]));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.put(['/api/pipeline/deals/:id/stage', '/api/pipeline/leads/:id/stage', '/api/leads/:id/stage'], authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('UPDATE leads SET stage = $1, updated_at = NOW() WHERE id = $2 RETURNING *', [normalizeStageForDb(req.body.stage), req.params.id]);
+        if (result.rows.length === 0) return res.status(404).json({ message: 'Deal not found' });
+        res.json(mapDeal(result.rows[0]));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.delete(['/api/pipeline/deals/:id', '/api/leads/:id'], authenticateToken, async (req, res) => {
+    try {
+        await pool.query('DELETE FROM leads WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -291,7 +696,7 @@ app.get('/api/pipeline', authenticateToken, async (req, res) => {
 app.get('/api/kanban', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM leads ORDER BY stage, created_at DESC');
-        res.json(result.rows);
+        res.json(result.rows.map(mapDeal));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -299,29 +704,29 @@ app.get('/api/kanban', authenticateToken, async (req, res) => {
 
 // Cold Callers, Outreachers, Freelancers
 app.get('/api/cold-callers', authenticateToken, async (req, res) => {
-    try { 
-        const r = await pool.query("SELECT * FROM users WHERE role = 'caller' ORDER BY created_at DESC"); 
-        res.json(r.rows); 
-    } catch(e) { 
-        res.json([]); 
+    try {
+        const r = await pool.query("SELECT id, full_name AS name, full_name, email, phone, role, status, salary, niche, rating, created_at FROM users WHERE role = 'caller' ORDER BY created_at DESC");
+        res.json(r.rows);
+    } catch(e) {
+        res.json([]);
     }
 });
 
 app.get('/api/outreachers', authenticateToken, async (req, res) => {
-    try { 
-        const r = await pool.query("SELECT * FROM users WHERE role = 'outreacher' ORDER BY created_at DESC"); 
-        res.json(r.rows); 
-    } catch(e) { 
-        res.json([]); 
+    try {
+        const r = await pool.query("SELECT id, full_name AS name, full_name, email, phone, role, status, salary, niche, rating, created_at FROM users WHERE role = 'outreacher' ORDER BY created_at DESC");
+        res.json(r.rows);
+    } catch(e) {
+        res.json([]);
     }
 });
 
 app.get('/api/freelancers', authenticateToken, async (req, res) => {
-    try { 
-        const r = await pool.query("SELECT * FROM users WHERE role = 'freelancer' ORDER BY created_at DESC"); 
-        res.json(r.rows); 
-    } catch(e) { 
-        res.json([]); 
+    try {
+        const r = await pool.query("SELECT id, full_name AS name, full_name, email, phone, role, status, salary AS hourlyRate, salary, skills, rating, created_at FROM users WHERE role = 'freelancer' ORDER BY created_at DESC");
+        res.json(r.rows.map((f) => ({ ...f, skills: Array.isArray(f.skills) ? f.skills.join(', ') : (f.skills || ''), hourlyRate: Number(f.hourlyrate || f.hourlyRate || f.salary || 0), rating: Number(f.rating || 0) })));
+    } catch(e) {
+        res.json([]);
     }
 });
 
@@ -329,18 +734,64 @@ app.get('/api/freelancers', authenticateToken, async (req, res) => {
 app.get('/api/staffing/requests', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM staffing_requests ORDER BY created_at DESC');
-        res.json(result.rows);
-    } catch (error) { 
-        res.json([]); 
+        res.json(result.rows.map((request) => ({
+            id: String(request.id),
+            companyName: request.company_name,
+            skill: request.skill,
+            description: request.description,
+            budget: Number(request.budget || 0),
+            timeline: request.timeline,
+            status: request.status || 'Open',
+            createdAt: request.created_at
+        })));
+    } catch (error) {
+        res.json([]);
+    }
+});
+
+app.post('/api/staffing/requests', authenticateToken, async (req, res) => {
+    const { companyName, skill, description, budget, timeline, status } = req.body;
+    if (!companyName) return res.status(400).json({ message: 'Company name is required' });
+
+    try {
+        const result = await pool.query(
+            `INSERT INTO staffing_requests (company_name, skill, description, budget, timeline, status)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [companyName, skill || null, description || null, budget || 0, timeline || null, status || 'Open']
+        );
+        const request = result.rows[0];
+        res.status(201).json({ id: String(request.id), companyName: request.company_name, skill: request.skill, description: request.description, budget: Number(request.budget || 0), timeline: request.timeline, status: request.status, createdAt: request.created_at });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
 
 app.get('/api/staffing/placements', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM placements ORDER BY created_at DESC');
-        res.json(result.rows);
-    } catch (error) { 
-        res.json([]); 
+        res.json(result.rows.map((placement) => ({
+            id: String(placement.id), freelancerId: placement.freelancer_id ? String(placement.freelancer_id) : '', requestId: placement.request_id ? String(placement.request_id) : '',
+            freelancerName: placement.freelancer_name, companyName: placement.company_name, budget: Number(placement.budget || 0),
+            freelancerEarn: Number(placement.freelancer_earn || 0), ourProfit: Number(placement.our_profit || 0), startDate: placement.start_date, status: placement.status || 'Active'
+        })));
+    } catch (error) {
+        res.json([]);
+    }
+});
+
+app.post('/api/staffing/placements', authenticateToken, async (req, res) => {
+    const { freelancerId, requestId, freelancerName, companyName, budget, freelancerEarn, ourProfit, startDate, status } = req.body;
+    try {
+        const result = await pool.query(
+            `INSERT INTO placements (freelancer_id, request_id, freelancer_name, company_name, budget, freelancer_earn, our_profit, start_date, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+            [freelancerId || null, requestId || null, freelancerName || null, companyName || null, budget || 0, freelancerEarn || 0, ourProfit || 0, startDate || null, status || 'Active']
+        );
+        if (requestId) await pool.query('UPDATE staffing_requests SET status = $1, updated_at = NOW() WHERE id = $2', ['Filled', requestId]);
+        const placement = result.rows[0];
+        res.status(201).json({ id: String(placement.id), freelancerId: placement.freelancer_id ? String(placement.freelancer_id) : '', requestId: placement.request_id ? String(placement.request_id) : '', freelancerName: placement.freelancer_name, companyName: placement.company_name, budget: Number(placement.budget || 0), freelancerEarn: Number(placement.freelancer_earn || 0), ourProfit: Number(placement.our_profit || 0), startDate: placement.start_date, status: placement.status });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 });
 
@@ -367,7 +818,7 @@ app.get('/api/time-tracking', authenticateToken, async (req, res) => {
 // Automation
 app.get('/api/automation', authenticateToken, async (req, res) => {
     try {
-        const tasks = await pool.query('SELECT COUNT(*) FROM tasks WHERE status != $1 AND deadline < NOW()', ['Done']);
+        const tasks = await pool.query('SELECT COUNT(*) FROM tasks WHERE status != $1 AND due_date < CURRENT_DATE', ['Done']);
         const invoices = await pool.query('SELECT COUNT(*) FROM invoices WHERE status = $1 AND due_date < NOW()', ['Pending']);
         res.json({
             overdueTasks: parseInt(tasks.rows[0]?.count || 0),
@@ -381,11 +832,84 @@ app.get('/api/automation', authenticateToken, async (req, res) => {
 
 // Analytics (certaines sont publiques, d'autres protégées)
 app.get('/api/analytics/revenue-trend', authenticateToken, async (req, res) => {
-    res.json(Array.from({ length: 30 }, () => 0));
+    try {
+        const result = await pool.query(`
+            SELECT to_char(day, 'Mon DD') AS label, COALESCE(SUM(i.amount), 0)::float AS amount
+            FROM generate_series(CURRENT_DATE - INTERVAL '29 days', CURRENT_DATE, INTERVAL '1 day') AS day
+            LEFT JOIN invoices i ON DATE(i.created_at) = day AND i.status IN ('paid', 'Paid')
+            GROUP BY day ORDER BY day
+        `);
+        res.json(result.rows.map((row) => row.amount));
+    } catch (error) {
+        res.json(Array.from({ length: 30 }, () => 0));
+    }
 });
 
 app.get('/api/analytics/calls-trend', authenticateToken, async (req, res) => {
-    res.json({ calls: [0, 0, 0, 0, 0, 0, 0], meetings: [0, 0, 0, 0, 0, 0, 0] });
+    try {
+        const result = await pool.query(`
+            SELECT day,
+                   COUNT(c.id)::int AS calls,
+                   COUNT(c.id) FILTER (WHERE c.outcome ILIKE '%meeting%')::int AS meetings
+            FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') AS day
+            LEFT JOIN calls c ON DATE(COALESCE(c.call_time, c.start_time)) = day
+            GROUP BY day ORDER BY day
+        `);
+        res.json({ calls: result.rows.map((row) => row.calls), meetings: result.rows.map((row) => row.meetings) });
+    } catch (error) {
+        res.json({ calls: [0, 0, 0, 0, 0, 0, 0], meetings: [0, 0, 0, 0, 0, 0, 0] });
+    }
+});
+
+app.get('/api/analytics/revenue-by-niche', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT COALESCE(l.niche, 'Other') AS niche, COALESCE(SUM(COALESCE(l.deal_value, l.estimated_value, 0)), 0)::float AS revenue
+            FROM leads l
+            GROUP BY COALESCE(l.niche, 'Other')
+            ORDER BY revenue DESC
+            LIMIT 8
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        res.json([]);
+    }
+});
+
+app.get('/api/analytics/revenue-by-service', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT COALESCE(status, 'active') AS service, COALESCE(SUM(budget), 0)::float AS revenue
+            FROM projects
+            GROUP BY COALESCE(status, 'active')
+            ORDER BY revenue DESC
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        res.json([]);
+    }
+});
+
+app.get('/api/analytics/leaderboard', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT u.full_name, u.role,
+                   COUNT(c.id)::int AS calls,
+                   COUNT(c.id) FILTER (WHERE c.outcome ILIKE '%meeting%')::int AS meetings,
+                   COUNT(l.id) FILTER (WHERE l.stage IN ('WON', 'CLOSED_WON'))::int AS deals,
+                   COALESCE(SUM(COALESCE(l.deal_value, l.estimated_value, 0)) FILTER (WHERE l.stage IN ('WON', 'CLOSED_WON')), 0)::float AS revenue
+            FROM users u
+            LEFT JOIN calls c ON c.caller_id = u.id
+            LEFT JOIN leads l ON l.assigned_to = u.id
+            WHERE u.role IN ('caller', 'outreacher', 'freelancer', 'admin')
+            GROUP BY u.id
+            ORDER BY revenue DESC, meetings DESC, calls DESC
+            LIMIT 10
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        res.json([]);
+    }
 });
 
 app.get('/api/analytics/conversion-funnel', authenticateToken, async (req, res) => {
@@ -395,7 +919,7 @@ app.get('/api/analytics/conversion-funnel', authenticateToken, async (req, res) 
             FROM leads
             GROUP BY stage
         `);
-        const counts = Object.fromEntries(result.rows.map(row => [row.stage, row.count]));
+        const counts = Object.fromEntries(result.rows.map(row => [normalizeStageForDb(row.stage), row.count]));
         const stages = ['LEAD', 'CONTACTED', 'MEETING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATING', 'WON'];
         res.json(stages.map(stage => ({ stage, count: counts[stage] || 0 })));
     } catch (error) {
@@ -404,7 +928,33 @@ app.get('/api/analytics/conversion-funnel', authenticateToken, async (req, res) 
 });
 
 app.get('/api/analytics/mrr-trend', authenticateToken, async (req, res) => {
-    res.json(Array.from({ length: 12 }, () => 0));
+    try {
+        const result = await pool.query(`
+            SELECT month, COALESCE(SUM(i.amount), 0)::float AS amount
+            FROM generate_series(date_trunc('month', CURRENT_DATE) - INTERVAL '11 months', date_trunc('month', CURRENT_DATE), INTERVAL '1 month') AS month
+            LEFT JOIN invoices i ON date_trunc('month', i.created_at) = month AND i.status IN ('paid', 'Paid')
+            GROUP BY month ORDER BY month
+        `);
+        res.json(result.rows.map((row) => row.amount));
+    } catch (error) {
+        res.json(Array.from({ length: 12 }, () => 0));
+    }
+});
+
+app.get('/api/analytics/close-rate-trend', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT month,
+                   COUNT(*) FILTER (WHERE stage IN ('WON', 'CLOSED_WON'))::float AS won,
+                   NULLIF(COUNT(*) FILTER (WHERE stage IN ('WON', 'CLOSED_WON', 'LOST', 'CLOSED_LOST')), 0)::float AS closed
+            FROM generate_series(date_trunc('month', CURRENT_DATE) - INTERVAL '5 months', date_trunc('month', CURRENT_DATE), INTERVAL '1 month') AS month
+            LEFT JOIN leads l ON date_trunc('month', l.created_at) = month
+            GROUP BY month ORDER BY month
+        `);
+        res.json(result.rows.map((row) => row.closed ? Math.round((row.won / row.closed) * 100) : 0));
+    } catch (error) {
+        res.json([0, 0, 0, 0, 0, 0]);
+    }
 });
 
 app.get('/api/leads/geo', authenticateToken, async (req, res) => {
@@ -421,6 +971,35 @@ app.get('/api/leads/geo', authenticateToken, async (req, res) => {
 });
 
 // Screen Monitoring
+app.post('/api/screen-monitor/start-session', authenticateToken, async (req, res) => {
+    const freelancerId = req.body.freelancerId || req.userId;
+    try {
+        const result = await pool.query(
+            `INSERT INTO screen_sessions (freelancer_id, start_time, status)
+             VALUES ($1, NOW(), 'active') RETURNING *`,
+            [freelancerId]
+        );
+        res.status(201).json({ success: true, session: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+app.post('/api/screen-monitor/stop-session/:id', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(
+            `UPDATE screen_sessions
+             SET end_time = NOW(), duration_seconds = EXTRACT(EPOCH FROM (NOW() - start_time))::int, status = 'completed'
+             WHERE id = $1 RETURNING *`,
+            [req.params.id]
+        );
+        if (!result.rows.length) return res.status(404).json({ message: 'Session not found' });
+        res.json({ success: true, session: result.rows[0] });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 app.get('/api/screen-monitor/sessions/:freelancerId', authenticateToken, async (req, res) => {
     try {
         const result = await pool.query('SELECT * FROM screen_sessions WHERE freelancer_id = $1 ORDER BY start_time DESC', [req.params.freelancerId]);
@@ -431,13 +1010,53 @@ app.get('/api/screen-monitor/sessions/:freelancerId', authenticateToken, async (
 });
 
 // Call Recording
+app.post('/api/call-recording/start-call', authenticateToken, async (req, res) => {
+    const { to, callerId, leadId } = req.body;
+    try {
+        const callSid = `CA${Date.now()}`;
+        const result = await pool.query(
+            `INSERT INTO calls (caller_id, lead_id, company_called, call_time, start_time, duration, outcome, twilio_call_sid, status)
+             VALUES ($1, $2, $3, NOW(), NOW(), 0, 'initiated', $4, 'initiated') RETURNING *`,
+            [callerId || req.userId, leadId || null, to || 'Unknown', callSid]
+        );
+        res.status(201).json({ success: true, callSid, callId: result.rows[0].id });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 app.get('/api/call-recording/calls/:callerId', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM calls WHERE caller_id = $1 ORDER BY start_time DESC', [req.params.callerId]);
+        const result = await pool.query(`
+            SELECT c.*, l.company_name, l.contact_name
+            FROM calls c
+            LEFT JOIN leads l ON l.id = c.lead_id
+            WHERE c.caller_id = $1
+            ORDER BY COALESCE(c.start_time, c.call_time) DESC
+        `, [req.params.callerId]);
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+});
+
+app.get('/api/call-recording/download/:callId', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query('SELECT recording_url FROM calls WHERE id = $1', [req.params.callId]);
+        if (!result.rows.length || !result.rows[0].recording_url) return res.status(404).json({ message: 'Recording not found' });
+        res.redirect(result.rows[0].recording_url);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+
+app.post('/api/messages', authenticateToken, async (req, res) => {
+    res.status(201).json({ success: true, id: Date.now().toString(), ...req.body });
+});
+
+app.post('/api/calls/schedule', authenticateToken, async (req, res) => {
+    res.status(201).json({ success: true, id: Date.now().toString(), ...req.body });
 });
 
 // Auth/Me (protégée)
