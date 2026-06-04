@@ -421,9 +421,77 @@ app.get('/api/leads/geo', authenticateToken, async (req, res) => {
 });
 
 // Screen Monitoring
+const ensureScreenSessionsTable = async () => {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS screen_sessions (
+            id SERIAL PRIMARY KEY,
+            freelancer_id INTEGER,
+            project_id INTEGER,
+            status VARCHAR(50) DEFAULT 'Active',
+            start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            end_time TIMESTAMP,
+            lines_written INTEGER DEFAULT 0,
+            ide_used VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+};
+
+app.post('/api/screen-monitor/start-session', authenticateToken, async (req, res) => {
+    const freelancerId = req.userId;
+    const projectId = Number.isInteger(Number(req.body.projectId)) ? Number(req.body.projectId) : null;
+
+    try {
+        await ensureScreenSessionsTable();
+        const result = await pool.query(
+            `INSERT INTO screen_sessions (freelancer_id, project_id, status, start_time)
+             VALUES ($1, $2, $3, NOW())
+             RETURNING id, freelancer_id, project_id, status, start_time, end_time`,
+            [freelancerId, projectId, 'Active']
+        );
+
+        res.status(201).json({ success: true, sessionId: result.rows[0].id, session: result.rows[0] });
+    } catch (error) {
+        console.error('Start screen session error:', error);
+        res.status(500).json({ success: false, message: 'Failed to start screen monitoring session' });
+    }
+});
+
+app.put('/api/screen-monitor/sessions/:sessionId/end', authenticateToken, async (req, res) => {
+    const sessionId = Number(req.params.sessionId);
+
+    if (!Number.isInteger(sessionId)) {
+        return res.status(400).json({ success: false, message: 'Invalid session id' });
+    }
+
+    try {
+        await ensureScreenSessionsTable();
+        const result = await pool.query(
+            `UPDATE screen_sessions
+             SET end_time = NOW(),
+                 status = $1,
+                 lines_written = COALESCE($2, lines_written),
+                 ide_used = COALESCE($3, ide_used)
+             WHERE id = $4
+             RETURNING id, freelancer_id, project_id, status, start_time, end_time, lines_written, ide_used`,
+            ['Completed', req.body.linesWritten ?? null, req.body.ideUsed || null, sessionId]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Session not found' });
+        }
+
+        res.json({ success: true, session: result.rows[0] });
+    } catch (error) {
+        console.error('End screen session error:', error);
+        res.status(500).json({ success: false, message: 'Failed to end screen monitoring session' });
+    }
+});
+
 app.get('/api/screen-monitor/sessions/:freelancerId', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT * FROM screen_sessions WHERE freelancer_id = $1 ORDER BY start_time DESC', [req.params.freelancerId]);
+        await ensureScreenSessionsTable();
+        const result = await pool.query('SELECT * FROM screen_sessions WHERE freelancer_id = $1 ORDER BY start_time DESC', [req.userId]);
         res.json(result.rows);
     } catch (error) {
         res.status(500).json({ message: error.message });

@@ -656,7 +656,7 @@
         }
     }
     
-    function stopScreenSharing() {
+    async function stopScreenSharing() {
         if (mediaStream) {
             mediaStream.getTracks().forEach(track => track.stop());
             mediaStream = null;
@@ -675,8 +675,26 @@
         
         if (currentSessionId) {
             stopCodeActivityTracking();
+            await endScreenSession(currentSessionId);
             showToast('Screen monitoring session ended');
             currentSessionId = null;
+        }
+    }
+
+    async function endScreenSession(sessionId) {
+        try {
+            const token = localStorage.getItem('niche_token');
+            await fetch(`${API_BASE}/screen-monitor/sessions/${sessionId}/end`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({
+                    linesWritten: parseInt(document.getElementById('linesWritten').innerText, 10) || 0,
+                    ideUsed: 'Browser Screen Share'
+                })
+            });
+            loadSessions();
+        } catch (error) {
+            console.error('Error ending session:', error);
         }
     }
     
