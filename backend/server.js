@@ -4,10 +4,12 @@ const path = require('path');
 const { Pool } = require('pg');
 const multer = require('multer');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'niche-crm-development-secret';
 
 const upload = multer();
 
@@ -15,6 +17,8 @@ const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
+
+app.set('db', pool);
 
 app.use(cors());
 app.use(express.json());
@@ -26,21 +30,47 @@ app.use('/assets', express.static(path.join(__dirname, '..', 'assets')));
 // ============================================================
 // AUTHENTICATION MIDDLEWARE (À mettre ici, avant toutes les routes)
 // ============================================================
+const createAuthToken = (user) => jwt.sign(
+    { id: user.id, email: user.email, role: user.role },
+    JWT_SECRET,
+    { expiresIn: '7d' }
+);
+
+const buildAuthResponse = (user) => ({
+    success: true,
+    token: createAuthToken(user),
+    id: user.id,
+    role: user.role || 'client',
+    name: user.full_name,
+    email: user.email,
+    avatar_initials: user.avatar_initials || (user.full_name || 'U').slice(0, 2).toUpperCase()
+});
+
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
-    
+
     if (!token) {
         return res.status(401).json({ message: 'Access denied. No token provided.' });
     }
-    
+
     try {
-        const decoded = Buffer.from(token, 'base64').toString();
-        const userId = decoded.split(':')[0];
-        req.userId = parseInt(userId);
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.userId = decoded.id;
+        req.user = decoded;
         next();
-    } catch (error) {
-        return res.status(403).json({ message: 'Invalid token.' });
+    } catch (jwtError) {
+        // Backward compatibility with old base64 demo tokens.
+        try {
+            const decoded = Buffer.from(token, 'base64').toString();
+            const userId = parseInt(decoded.split(':')[0], 10);
+            if (!Number.isInteger(userId)) throw new Error('Invalid legacy token');
+            req.userId = userId;
+            req.user = { id: userId };
+            next();
+        } catch (legacyError) {
+            return res.status(403).json({ message: 'Invalid token.' });
+        }
     }
 };
 
@@ -52,14 +82,63 @@ app.get('/api/health', (req, res) => {
 // ============================================================
 // AUTH ROUTES (PUBLIC)
 // ============================================================
-app.post('/api/auth/register', upload.none(), async (req, res) => {
-    // ... code existant ...
-    res.json({ success: true });
+app.post('/api/auth/register', upload.any(), async (req, res) => {
+    const { full_name, username, email, phone, role, avatar_initials } = req.body;
+    const password = req.body.password || req.body.password_hash;
+
+    if (!full_name || !email || !password) {
+        return res.status(400).json({ success: false, message: 'Full name, email and password are required.' });
+    }
+
+    try {
+        const exists = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+        if (exists.rows.length > 0) {
+            return res.status(400).json({ success: false, message: 'Email already exists' });
+        }
+
+        const passwordHash = await bcrypt.hash(password, 10);
+        const result = await pool.query(
+            `INSERT INTO users (full_name, username, email, phone, password_hash, role)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id, full_name, email, role`,
+            [full_name, username || null, email, phone || null, passwordHash, role || 'client']
+        );
+
+        res.status(201).json(buildAuthResponse({ ...result.rows[0], avatar_initials }));
+    } catch (error) {
+        console.error('Register error:', error);
+        res.status(500).json({ success: false, message: 'Registration failed. Please try again.' });
+    }
 });
 
 app.post('/api/auth/login', async (req, res) => {
-    // ... code existant ...
-    res.json({ success: true, token });
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ success: false, message: 'Email and password are required.' });
+    }
+
+    try {
+        const result = await pool.query('SELECT id, full_name, email, role, password_hash FROM users WHERE email = $1', [email]);
+        if (result.rows.length === 0) {
+            return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+        }
+
+        const user = result.rows[0];
+        const isBcryptHash = /^\$2[aby]\$/.test(user.password_hash || '');
+        const passwordMatches = isBcryptHash
+            ? await bcrypt.compare(password, user.password_hash)
+            : password === user.password_hash;
+
+        if (!passwordMatches) {
+            return res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+        }
+
+        res.json(buildAuthResponse(user));
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
 });
 
 // ============================================================
@@ -68,12 +147,77 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Dashboard
 app.get('/api/dashboard', authenticateToken, async (req, res) => {
-    // ... code existant ...
+    try {
+        const [calls, meetings, wonDeals, pipeline, revenue, expenses] = await Promise.all([
+            pool.query("SELECT COUNT(*) FROM calls WHERE DATE(COALESCE(call_time, NOW())) = CURRENT_DATE"),
+            pool.query("SELECT COUNT(*) FROM calls WHERE outcome ILIKE '%meeting%'"),
+            pool.query("SELECT COUNT(*) FROM leads WHERE stage IN ('WON', 'CLOSED_WON')"),
+            pool.query("SELECT COALESCE(SUM(COALESCE(deal_value, estimated_value, 0)), 0) AS total FROM leads"),
+            pool.query("SELECT COALESCE(SUM(amount), 0) AS total FROM invoices WHERE status IN ('paid', 'Paid')"),
+            pool.query("SELECT COALESCE(SUM(amount), 0) AS total FROM expenses")
+        ]);
+
+        const totalRevenue = Number(revenue.rows[0]?.total || 0);
+        const totalExpenses = Number(expenses.rows[0]?.total || 0);
+        const netProfit = totalRevenue - totalExpenses;
+
+        res.json({
+            todayCalls: Number(calls.rows[0]?.count || 0),
+            todayMeetings: Number(meetings.rows[0]?.count || 0),
+            todayDeals: Number(wonDeals.rows[0]?.count || 0),
+            todayRevenue: totalRevenue,
+            pipelineTotal: Number(pipeline.rows[0]?.total || 0),
+            pipelineMonth: Number(pipeline.rows[0]?.total || 0),
+            pipelineAtRisk: 0,
+            topPerformer: '—',
+            needsAttention: '—',
+            mrr: totalRevenue,
+            expenses: totalExpenses,
+            netProfit,
+            profitMargin: totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0
+        });
+    } catch (error) {
+        console.error('Dashboard error:', error);
+        res.json({
+            todayCalls: 0, todayMeetings: 0, todayDeals: 0, todayRevenue: 0,
+            pipelineTotal: 0, pipelineMonth: 0, pipelineAtRisk: 0, topPerformer: '—',
+            needsAttention: '—', mrr: 0, expenses: 0, netProfit: 0, profitMargin: 0
+        });
+    }
 });
 
 // Users
 app.get('/api/users/me', authenticateToken, async (req, res) => {
-    // ... code existant ...
+    try {
+        const result = await pool.query(
+            'SELECT id, full_name, username, email, phone, role, status, created_at FROM users WHERE id = $1',
+            [req.userId]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ message: 'User not found' });
+        res.json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.put('/api/users/me', authenticateToken, async (req, res) => {
+    const { full_name, username, phone } = req.body;
+    try {
+        const result = await pool.query(
+            `UPDATE users
+             SET full_name = COALESCE($1, full_name),
+                 username = COALESCE($2, username),
+                 phone = COALESCE($3, phone),
+                 updated_at = NOW()
+             WHERE id = $4
+             RETURNING id, full_name, username, email, phone, role, status, created_at`,
+            [full_name || null, username || null, phone || null, req.userId]
+        );
+        if (result.rows.length === 0) return res.status(404).json({ message: 'User not found' });
+        res.json(result.rows[0]);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
 });
 
 app.get('/api/users', authenticateToken, async (req, res) => {
@@ -237,11 +381,43 @@ app.get('/api/automation', authenticateToken, async (req, res) => {
 
 // Analytics (certaines sont publiques, d'autres protégées)
 app.get('/api/analytics/revenue-trend', authenticateToken, async (req, res) => {
-    // ... code existant ...
+    res.json(Array.from({ length: 30 }, () => 0));
+});
+
+app.get('/api/analytics/calls-trend', authenticateToken, async (req, res) => {
+    res.json({ calls: [0, 0, 0, 0, 0, 0, 0], meetings: [0, 0, 0, 0, 0, 0, 0] });
 });
 
 app.get('/api/analytics/conversion-funnel', authenticateToken, async (req, res) => {
-    // ... code existant ...
+    try {
+        const result = await pool.query(`
+            SELECT stage, COUNT(*)::int AS count
+            FROM leads
+            GROUP BY stage
+        `);
+        const counts = Object.fromEntries(result.rows.map(row => [row.stage, row.count]));
+        const stages = ['LEAD', 'CONTACTED', 'MEETING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATING', 'WON'];
+        res.json(stages.map(stage => ({ stage, count: counts[stage] || 0 })));
+    } catch (error) {
+        res.json(['LEAD', 'CONTACTED', 'MEETING', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATING', 'WON'].map(stage => ({ stage, count: 0 })));
+    }
+});
+
+app.get('/api/analytics/mrr-trend', authenticateToken, async (req, res) => {
+    res.json(Array.from({ length: 12 }, () => 0));
+});
+
+app.get('/api/leads/geo', authenticateToken, async (req, res) => {
+    try {
+        const result = await pool.query(`
+            SELECT company_name AS company, contact_name AS contact, COALESCE(deal_value, estimated_value, 0) AS value, stage, lat, lng
+            FROM leads
+            WHERE lat IS NOT NULL AND lng IS NOT NULL
+        `);
+        res.json(result.rows);
+    } catch (error) {
+        res.json([]);
+    }
 });
 
 // Screen Monitoring
@@ -267,7 +443,7 @@ app.get('/api/call-recording/calls/:callerId', authenticateToken, async (req, re
 // Auth/Me (protégée)
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
     try {
-        const result = await pool.query('SELECT id, full_name as name, email, role, avatar_initials as avatarUrl FROM users WHERE id = $1', [req.userId]);
+        const result = await pool.query('SELECT id, full_name as name, email, role FROM users WHERE id = $1', [req.userId]);
         if (result.rows.length === 0) return res.status(404).json({ message: 'User not found' });
         res.json(result.rows[0]);
     } catch (error) {

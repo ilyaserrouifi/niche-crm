@@ -931,39 +931,6 @@
       loadDashboardData();
     }
   }, 30000);
-// Ajouter avant loadDashboardData()
-async function fetchWithAuth(url, options = {}) {
-    const token = localStorage.getItem('niche_token');
-    if (!token) {
-        window.location.href = '/login.html';
-        return null;
-    }
-    
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            ...options.headers,
-            'Authorization': `Bearer ${token}`
-        }
-    });
-    
-    if (response.status === 401) {
-        localStorage.clear();
-        window.location.href = '/login.html';
-        throw new Error('Session expired');
-    }
-    return response;
-}
-
-// Remplacer fetch par fetchWithAuth dans loadDashboardData
-async function loadDashboardData() {
-    try {
-        const statsRes = await fetchWithAuth('/api/dashboard');
-        // ... reste du code
-    } catch (error) {
-        console.error('API error:', error);
-    }
-}
 </script>
 </body>
 </html>
