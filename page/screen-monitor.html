@@ -399,6 +399,46 @@
             .monitor-container { grid-template-columns: 1fr; }
             .stats-row { grid-template-columns: repeat(2,1fr); }
         }
+
+
+        /* Screen Monitor sidebar fixes */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: var(--blue-primary) rgba(255,255,255,0.05);
+        }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--blue-primary); border-radius: 4px; }
+        .sidebar-brand { flex-shrink: 0; }
+        .brand-logo-link {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+            margin: 0 auto;
+            text-decoration: none;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .brand-logo-link:hover { transform: translateY(-2px); box-shadow: 0 0 24px rgba(43,47,255,0.25); }
+        .brand-logo { width: 96px; height: 96px; object-fit: contain; display: block; }
+        .sidebar .nav-item i { width: 20px; min-width: 20px; text-align: center; font-size: 16px; font-style: normal; }
+        .sidebar .logout-btn i { font-style: normal; }
+        @media (max-width: 900px) {
+            .brand-logo-link { width: 48px; height: 48px; }
+            .brand-logo { width: 42px; height: 42px; }
+            .sidebar .nav-item { justify-content: center; padding: 10px 8px; }
+            .sidebar .nav-item i { margin: 0; }
+        }
+
     </style>
 </head>
 <body>
@@ -409,25 +449,34 @@
 
 <div class="sidebar">
     <div class="sidebar-brand">
-        <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden;">
-            <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
-        </div>
+        <a class="brand-logo-link" href="/index.html" aria-label="Go to dashboard">
+            <img class="brand-logo" src="/assets/logo-niche.png" alt="Niche CRM logo">
+        </a>
         <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
     </div>
     <div class="nav-section">MAIN</div>
     <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+    <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Sales Pipeline</span></a>
+    <a href="/page/kanban.html" class="nav-item"><i>🎯</i> <span>Kanban Board</span></a>
+    <a href="/page/gantt.html" class="nav-item"><i>📅</i> <span>Gantt Chart</span></a>
     <a href="/page/screen-monitor.html" class="nav-item active"><i>🖥️</i> <span>Screen Monitor</span></a>
-    <a href="/page/kanban.html" class="nav-item"><i>🎯</i> <span>Kanban</span></a>
-    <a href="/page/gantt.html" class="nav-item"><i>📅</i> <span>Gantt</span></a>
     <div class="nav-section">PEOPLE</div>
     <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
     <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
     <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
     <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+    <a href="/page/staffing.html" class="nav-item"><i>🌟</i> <span>Talent Marketplace</span></a>
     <div class="nav-section">WORK</div>
     <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
     <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
     <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
+    <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+    <a href="/page/reports.html" class="nav-item"><i>📋</i> <span>Reports</span></a>
+    <div class="nav-section">PORTAL</div>
+    <a href="/page/client-portal.html" class="nav-item"><i>🏢</i> <span>Client Portal</span></a>
+    <a href="/page/call-recording.html" class="nav-item"><i>🎙️</i> <span>Call Recording</span></a>
+    <div class="nav-section">SYSTEM</div>
+    <a href="/profile.html" class="nav-item"><i>👤</i> <span>My Profile</span></a>
     <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
 </div>
 
