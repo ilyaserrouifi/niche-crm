@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "rootDirectory": "niche-crm-main",
   "builds": [
     {
       "src": "backend/server.js",
