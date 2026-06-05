@@ -169,7 +169,7 @@ const ensureDatabaseSchema = async () => {
             source VARCHAR(100),
             niche VARCHAR(100),
             value DECIMAL(12,2) DEFAULT 0,
-            value DECIMAL(12,2) DEFAULT 0,
+            
             proposal_date DATE,
             stage VARCHAR(50) DEFAULT 'LEAD',
             assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
