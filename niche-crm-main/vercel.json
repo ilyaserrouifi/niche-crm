@@ -6,11 +6,7 @@
       "use": "@vercel/node"
     },
     {
-      "src": "*.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "page/*.html",
+      "src": "**/*.html",
       "use": "@vercel/static"
     },
     {
@@ -28,24 +24,16 @@
       "dest": "/login.html"
     },
     {
-      "src": "/register.html",
-      "dest": "/register.html"
-    },
-    {
-      "src": "/login.html",
-      "dest": "/login.html"
-    },
-    {
-      "src": "/index.html",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/profile.html",
-      "dest": "/profile.html"
-    },
-    {
-      "src": "/(.*)",
+      "src": "/(.*\\.html)",
       "dest": "/$1"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/page/(.*)",
+      "dest": "/page/$1"
     }
   ]
 }
