@@ -1,0 +1,104 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niche CRM — Call Recording</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-deep: #0a0d14;
+            --blue-primary: #2b2fff;
+            --surface-card: rgba(255,255,255,0.04);
+            --border-subtle: rgba(255,255,255,0.07);
+            --text-primary: #ededf2;
+            --text-muted: rgba(237,237,242,0.4);
+            --success-green: #10b981;
+            --error-red: #ef4444;
+        }
+        body { font-family: 'DM Sans', sans-serif; background: var(--bg-deep); color: var(--text-primary); }
+        .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; background: rgba(13,16,23,0.98); border-right: 1px solid var(--border-subtle); z-index: 100; }
+        .sidebar-brand { padding: 20px; text-align: center; border-bottom: 1px solid var(--border-subtle); }
+        .brand-name { font-size: 18px; font-weight: 700; color: white; }
+        .brand-sub { font-size: 9px; color: var(--text-muted); }
+        .nav-section { color: #374151; font-size: 10px; text-transform: uppercase; padding: 20px 20px 8px 20px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; margin: 2px 12px; border-radius: 10px; color: #9ca3af; text-decoration: none; transition: all 0.2s; }
+        .nav-item:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+        .logout-wrapper { margin-top: auto; padding: 20px 16px; border-top: 1px solid var(--border-subtle); }
+        .logout-btn { width: 100%; background: rgba(239,68,68,0.12); border: none; border-radius: 10px; padding: 12px; color: #ef4444; cursor: pointer; }
+        .main-content { margin-left: 260px; padding: 24px 32px; }
+        .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle); }
+        .page-title h1 { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #fff, #a5b4fc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .page-date { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+        .refresh-btn { background: rgba(43,47,255,0.15); border: 1px solid rgba(43,47,255,0.3); border-radius: 8px; padding: 10px 16px; color: var(--blue-primary); cursor: pointer; }
+        .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 20px; text-align: center; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--blue-primary); }
+        .stat-label { font-size: 10px; color: var(--text-muted); margin-top: 8px; }
+        .card { background: var(--surface-card); border: 1px solid var(--border-subtle); border-radius: 20px; overflow: hidden; margin-bottom: 24px; }
+        .card-header { padding: 18px 24px; border-bottom: 1px solid var(--border-subtle); }
+        .card-header h3 { font-size: 14px; font-weight: 600; text-transform: uppercase; color: #9ca3af; }
+        .card-body { padding: 20px 24px; }
+        .call-panel { display: flex; gap: 20px; align-items: center; justify-content: center; flex-wrap: wrap; }
+        .call-btn { background: linear-gradient(135deg,#4f46e5,#7c3aed); border: none; border-radius: 60px; padding: 15px 30px; color: white; font-size: 16px; font-weight: 600; cursor: pointer; }
+        .call-btn:hover { transform: scale(1.02); filter: brightness(1.1); }
+        .call-status { font-size: 14px; padding: 12px 24px; border-radius: 40px; background: rgba(0,0,0,0.3); text-align: center; margin-top: 20px; }
+        .recording-list { max-height: 400px; overflow-y: auto; }
+        .recording-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .btn-play { background: rgba(43,47,255,0.2); border: none; border-radius: 8px; padding: 6px 12px; color: var(--blue-primary); cursor: pointer; }
+        .empty-state { text-align: center; padding: 40px; color: #6b7280; }
+        .toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: white; padding: 12px 24px; border-radius: 10px; z-index: 1100; animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @media (max-width: 900px) { .sidebar { width: 80px; } .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; } .main-content { margin-left: 80px; padding: 16px; } .stats-row { grid-template-columns: repeat(2,1fr); } }
+    </style>
+  <link rel="stylesheet" href="/assets/glass-nav.css" />
+  <script src="/assets/glass-nav.js" defer></script>
+</head>
+<body>
+<div class="sidebar">
+    <div class="sidebar-brand"><div style="width:80px;height:80px;border-radius:50%;background:white;margin:0 auto;"><img src="/assets/logo-niche.png" alt="Logo" style="width:70px;height:70px;object-fit:contain;border-radius:50%;"></div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+    <div class="nav-section">MAIN</div>
+    <a href="/index.html" class="nav-item">📊 Dashboard</a>
+    <a href="/page/call-recording.html" class="nav-item active">📞 Call Recording</a>
+    <a href="/page/screen-monitor.html" class="nav-item">🖥️ Screen Monitor</a>
+    <div class="nav-section">PEOPLE</div>
+    <a href="/page/cold-callers.html" class="nav-item">📞 Cold Callers</a>
+    <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn">🚪 Logout</button></div>
+</div>
+<div class="main-content">
+    <div class="top-header"><div class="page-title"><h1>Call Recording System</h1><div class="page-date" id="currentDate"></div></div><button class="refresh-btn" id="refreshBtn">⟳ Refresh</button></div>
+    <div class="stats-row"><div class="stat-card"><div class="stat-value" id="totalCalls">0</div><div class="stat-label">TOTAL CALLS</div></div><div class="stat-card"><div class="stat-value" id="avgDuration">0s</div><div class="stat-label">AVG DURATION</div></div><div class="stat-card"><div class="stat-value" id="conversionRate">0%</div><div class="stat-label">CONVERSION RATE</div></div><div class="stat-card"><div class="stat-value" id="successRate">0%</div><div class="stat-label">SUCCESS RATE</div></div></div>
+    <div class="card"><div class="card-header"><h3>📞 Make a Call</h3></div><div class="card-body"><div class="call-panel"><input type="tel" id="phoneNumber" placeholder="+212XXXXXXXXX" style="padding:12px 20px;border-radius:60px;background:#1a1f2e;border:1px solid var(--border-subtle);color:white;width:250px;"><select id="leadSelect" style="padding:12px 20px;border-radius:60px;background:#1a1f2e;border:1px solid var(--border-subtle);color:white;"><option value="">Select a lead...</option></select><button class="call-btn" id="makeCallBtn">📞 Make Call</button><button class="call-btn" id="hangupBtn" style="display:none;background:#ef4444;">⏹️ Hang Up</button></div><div class="call-status" id="callStatus">Ready to make calls</div></div></div>
+    <div class="card"><div class="card-header"><h3>🎙️ Recent Recordings</h3></div><div class="card-body recording-list" id="recordingsList"><div class="empty-state">No recordings yet</div></div></div>
+</div>
+<script>
+    let currentCall=null;const API_BASE='/api';
+    if(!localStorage.getItem('niche_token')){window.location.href='/login.html';}
+    function showToast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}
+    function updateDate(){document.getElementById('currentDate').innerText=new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});}
+    async function makeCall(){
+        const phoneNumber=document.getElementById('phoneNumber').value,leadId=document.getElementById('leadSelect').value;
+        if(!phoneNumber&&!leadId){showToast('Please enter a phone number or select a lead','error');return;}
+        try{
+            const token=localStorage.getItem('niche_token');
+            await fetch(`${API_BASE}/call-recording/start-call`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},body:JSON.stringify({to:phoneNumber,callerId:1,leadId:leadId||null})});
+            document.getElementById('makeCallBtn').style.display='none';document.getElementById('hangupBtn').style.display='inline-block';document.getElementById('callStatus').innerHTML='📞 Call in progress - Recording...';document.getElementById('callStatus').style.background='rgba(239,68,68,0.2)';showToast('Call started!');
+            setTimeout(()=>hangup(),30000);
+        }catch(e){showToast('Call failed','error');}
+    }
+    function hangup(){document.getElementById('makeCallBtn').style.display='inline-block';document.getElementById('hangupBtn').style.display='none';document.getElementById('callStatus').innerHTML='Call ended';document.getElementById('callStatus').style.background='';showToast('Call ended. Recording saved.');loadRecordings();}
+    async function loadLeads(){try{const token=localStorage.getItem('niche_token');const res=await fetch(`${API_BASE}/leads`,{headers:{'Authorization':`Bearer ${token}`}});const leads=await res.json();const select=document.getElementById('leadSelect');leads.forEach(l=>{const o=document.createElement('option');o.value=l.id;o.textContent=(l.company_name||'Lead')+' - '+(l.contact_name||'No contact');select.appendChild(o);});}catch(e){console.error(e);}}
+    async function loadRecordings(){try{const token=localStorage.getItem('niche_token');const res=await fetch(`${API_BASE}/call-recording/calls/1`,{headers:{'Authorization':`Bearer ${token}`}});const calls=await res.json();const c=document.getElementById('recordingsList');if(!calls||calls.length===0){c.innerHTML='<div class="empty-state">No recordings yet</div>';return;}
+    document.getElementById('totalCalls').innerText=calls.length;const avgDur=calls.reduce((s,call)=>s+(call.duration||0),0)/calls.length;document.getElementById('avgDuration').innerText=Math.floor(avgDur||0)+'s';document.getElementById('conversionRate').innerText='0%';document.getElementById('successRate').innerText='0%';
+    c.innerHTML=calls.map(call=>`<div class="recording-item"><div><strong>${call.company_name||'Unknown'}</strong><div style="font-size:11px;color:var(--text-muted);">${new Date(call.start_time).toLocaleString()} | ${call.duration||0}s</div></div><div>${call.recording_url?`<audio controls src="${call.recording_url}" style="width:200px;"></audio>`:'<span style="color:var(--text-muted);">Demo recording</span>'}<button class="btn-play" onclick="downloadRecording(${call.id})">📥 Download</button></div></div>`).join('');}catch(e){console.error(e);}}
+    async function downloadRecording(callId){showToast('Download started (demo mode)');}
+    function refreshData(){loadRecordings();showToast('Data refreshed');}
+    document.getElementById('makeCallBtn').onclick=makeCall;document.getElementById('hangupBtn').onclick=hangup;document.getElementById('refreshBtn').onclick=refreshData;document.getElementById('logoutBtn').onclick=()=>{localStorage.clear();window.location.href='/login.html';};
+    window.downloadRecording=downloadRecording;
+    updateDate();loadLeads();loadRecordings();
+    setInterval(()=>{if(localStorage.getItem('niche_token'))loadRecordings();},30000);
+</script>
+</body>
+</html>

@@ -1,0 +1,897 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Staffing & Talent Marketplace</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --cyan: #06b6d4;
+      --purple: #818cf8;
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: rgba(13, 16, 23, 0.98);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: white; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+    .nav-section {
+      color: #374151;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 20px 20px 8px 20px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      margin: 2px 12px;
+      border-radius: 10px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item i { width: 20px; font-size: 16px; font-style: normal; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+
+    .logout-wrapper {
+      margin-top: auto;
+      padding: 20px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .logout-btn {
+      width: 100%;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 12px;
+      color: #ef4444;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Main content */
+    .main-content {
+      margin-left: 260px;
+      padding: 24px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .page-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-add {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 13px;
+      transition: var(--transition);
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 20px;
+      transition: var(--transition);
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
+    .stat-value { font-size: 28px; font-weight: 700; }
+    .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+    .color-purple { color: #818cf8; }
+    .color-green { color: #34d399; }
+    .color-gold { color: #fbbf24; }
+    .color-emerald { color: #10b981; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 12px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 8px 20px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      border-radius: 8px;
+    }
+    .tab-btn.active {
+      background: rgba(43,47,255,0.15);
+      color: var(--blue-primary);
+    }
+    .tab-btn:hover { color: white; }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .filter-chip {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 30px;
+      padding: 6px 16px;
+      color: #9ca3af;
+      font-size: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .filter-chip.active {
+      background: rgba(43,47,255,0.15);
+      color: var(--blue-primary);
+      border-color: var(--blue-primary);
+    }
+    .filter-chip:hover { background: rgba(43,47,255,0.1); color: white; }
+
+    /* Cards grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .talent-card, .request-card, .placement-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .talent-card:hover, .request-card:hover, .placement-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(43,47,255,0.3);
+    }
+    .card-header {
+      padding: 16px 20px;
+      background: rgba(43,47,255,0.1);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-header h3 { font-size: 16px; font-weight: 600; color: white; }
+    .card-body { padding: 16px 20px; }
+    .skill-tag {
+      display: inline-block;
+      background: rgba(43,47,255,0.15);
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      color: #818cf8;
+      margin: 4px 4px 0 0;
+    }
+    .rating {
+      color: #fbbf24;
+      font-size: 12px;
+    }
+    .price {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--success-green);
+    }
+    .commission-row {
+      background: rgba(0,0,0,0.2);
+      border-radius: 12px;
+      padding: 12px;
+      margin: 12px 0;
+    }
+    .btn-match, .btn-contact, .btn-assign {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 12px;
+    }
+    .btn-match:hover, .btn-contact:hover, .btn-assign:hover { filter: brightness(1.1); }
+
+    /* Loading spinner */
+    .loading-spinner { text-align: center; padding: 60px; }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(43,47,255,0.2);
+      border-top-color: #2b2fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #10b981;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 1100;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal {
+      background: #111520;
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      width: 550px;
+      max-width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 28px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 { font-size: 20px; font-weight: 700; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: #6b7280;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .field-group { margin-bottom: 14px; }
+    .field-label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .field-input, .field-select, .field-textarea {
+      width: 100%;
+      background: #1a1f2e;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: white;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 16px;
+      color: #9ca3af;
+      cursor: pointer;
+    }
+    .btn-save {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .cards-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/glass-nav.css" />
+  <script src="/assets/glass-nav.js" defer></script>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+  <a href="/page/kanban.html" class="nav-item"><i>🔀</i> <span>Kanban</span></a>
+  <a href="/page/gantt.html" class="nav-item"><i>📅</i> <span>Gantt</span></a>
+  <div class="nav-section">PEOPLE</div>
+  <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
+  <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
+  <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
+  <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  <div class="nav-section">WORK</div>
+  <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
+  <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
+  <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
+  <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  <div class="nav-section">STAFFING</div>
+  <a href="/page/staffing.html" class="nav-item active"><i>🌐</i> <span>Talent Marketplace</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title">
+      <h1>Talent Marketplace</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div class="header-actions">
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addRequestBtn">+ New Request</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value color-purple" id="totalFreelancers">0</div><div class="stat-label">TOTAL FREELANCERS</div></div>
+    <div class="stat-card"><div class="stat-value color-green" id="activeRequests">0</div><div class="stat-label">ACTIVE REQUESTS</div></div>
+    <div class="stat-card"><div class="stat-value color-gold" id="totalPlacements">0</div><div class="stat-label">PLACEMENTS</div></div>
+    <div class="stat-card"><div class="stat-value color-emerald" id="totalCommission"></div><div class="stat-label">TOTAL COMMISSION</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="freelancers">🎨 Freelancers</button>
+    <button class="tab-btn" data-tab="requests">📋 Talent Requests</button>
+    <button class="tab-btn" data-tab="placements">🤝 Active Placements</button>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar" id="filterBar">
+    <div class="filter-chip active" data-filter="all">All</div>
+    <div class="filter-chip" data-filter="Design">Design</div>
+    <div class="filter-chip" data-filter="Development">Development</div>
+    <div class="filter-chip" data-filter="SEO">SEO</div>
+    <div class="filter-chip" data-filter="Ads">Ads</div>
+    <div class="filter-chip" data-filter="Content">Content</div>
+  </div>
+
+  <!-- Freelancers Section -->
+  <div id="freelancersSection" class="cards-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading freelancers...</div>
+  </div>
+
+  <!-- Requests Section (hidden) -->
+  <div id="requestsSection" style="display:none" class="cards-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading requests...</div>
+  </div>
+
+  <!-- Placements Section (hidden) -->
+  <div id="placementsSection" style="display:none" class="cards-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading placements...</div>
+  </div>
+</div>
+
+<!-- Modal Add Request -->
+<div id="requestModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3>New Talent Request</h3><button class="modal-close" id="closeModalBtn">✕</button></div>
+    <div id="modalBody"></div>
+    <div id="modalFooter"></div>
+  </div>
+</div>
+
+<script>
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+
+  let freelancers = [];
+  let requests = [];
+  let placements = [];
+  let currentTab = 'freelancers';
+  let currentFilter = 'all';
+  const API_BASE = '/api';
+
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function authHeaders(extra = {}) {
+    const token = localStorage.getItem('niche_token');
+    return { ...extra, Authorization: `Bearer ${token}` };
+  }
+
+  function saveToLocal() {
+    localStorage.setItem('staffing_freelancers', JSON.stringify(freelancers));
+    localStorage.setItem('staffing_requests', JSON.stringify(requests));
+    localStorage.setItem('staffing_placements', JSON.stringify(placements));
+  }
+
+  function loadFromLocal() {
+    freelancers = JSON.parse(localStorage.getItem('staffing_freelancers') || '[]');
+    requests = JSON.parse(localStorage.getItem('staffing_requests') || '[]');
+    placements = JSON.parse(localStorage.getItem('staffing_placements') || '[]');
+    renderAll();
+  }
+
+  async function fetchAllData() {
+    try {
+      const [freelancersRes, requestsRes, placementsRes] = await Promise.all([
+        fetch(`${API_BASE}/freelancers`, { headers: authHeaders() }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/staffing/requests`, { headers: authHeaders() }).catch(() => ({ ok: false })),
+        fetch(`${API_BASE}/staffing/placements`, { headers: authHeaders() }).catch(() => ({ ok: false }))
+      ]);
+
+      if (freelancersRes.ok) freelancers = await freelancersRes.json();
+      if (requestsRes.ok) requests = await requestsRes.json();
+      if (placementsRes.ok) placements = await placementsRes.json();
+      saveToLocal();
+      renderAll();
+    } catch (error) {
+      console.error('Staffing API error:', error);
+      loadFromLocal();
+    }
+  }
+
+  async function addRequestToAPI(request) {
+    try {
+      const response = await fetch(`${API_BASE}/staffing/requests`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(request)
+      });
+      if (!response.ok) throw new Error('API request failed');
+      requests.push(await response.json());
+      saveToLocal();
+      renderAll();
+      showToast('Request added successfully!');
+    } catch (error) {
+      addRequestLocal(request);
+    }
+  }
+
+  function addRequestLocal(request) {
+    request.id = Date.now().toString();
+    request.createdAt = new Date().toISOString();
+    request.status = 'Open';
+    requests.push(request);
+    saveToLocal();
+    renderAll();
+    showToast('Request added locally!');
+  }
+
+  async function createPlacement(freelancerId, requestId, budget) {
+    const freelancer = freelancers.find(f => String(f.id) === String(freelancerId));
+    const request = requests.find(r => String(r.id) === String(requestId));
+    if (!freelancer || !request) return;
+
+    const ourProfit = Math.round(budget * 0.25);
+    const freelancerEarn = budget - ourProfit;
+    const placement = {
+      freelancerId,
+      requestId,
+      freelancerName: freelancer.name || freelancer.full_name || 'Freelancer',
+      companyName: request.companyName,
+      budget,
+      freelancerEarn,
+      ourProfit,
+      startDate: new Date().toISOString().split('T')[0],
+      status: 'Active'
+    };
+
+    try {
+      const response = await fetch(`${API_BASE}/staffing/placements`, {
+        method: 'POST',
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(placement)
+      });
+      if (!response.ok) throw new Error('API placement failed');
+      placements.push(await response.json());
+      const reqIndex = requests.findIndex(r => String(r.id) === String(requestId));
+      if (reqIndex !== -1) requests[reqIndex].status = 'Filled';
+      saveToLocal();
+      renderAll();
+      showToast(`Placement created! Freelancer earns $${freelancerEarn.toLocaleString()}, our profit $${ourProfit.toLocaleString()}`);
+    } catch (error) {
+      placements.push({ id: Date.now().toString(), ...placement });
+      const reqIndex = requests.findIndex(r => String(r.id) === String(requestId));
+      if (reqIndex !== -1) requests[reqIndex].status = 'Filled';
+      saveToLocal();
+      renderAll();
+      showToast('Placement created locally!');
+    }
+  }
+
+  function getFilteredFreelancers() {
+    if (currentFilter === 'all') return freelancers;
+    return freelancers.filter(f => String(f.skills || '').toLowerCase().includes(currentFilter.toLowerCase()));
+  }
+
+  function renderAll() {
+    updateStats();
+    renderFreelancers();
+    renderRequests();
+    renderPlacements();
+  }
+
+  function updateStats() {
+    document.getElementById('totalFreelancers').innerText = freelancers.length;
+    document.getElementById('activeRequests').innerText = requests.filter(r => r.status === 'Open').length;
+    document.getElementById('totalPlacements').innerText = placements.length;
+    const totalComm = placements.reduce((sum, p) => sum + (parseFloat(p.ourProfit) || 0), 0);
+    document.getElementById('totalCommission').innerText = '$' + totalComm.toLocaleString();
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : (m === '<' ? '&lt;' : '&gt;'));
+  }
+
+  function renderFreelancers() {
+    const container = document.getElementById('freelancersSection');
+    const filtered = getFilteredFreelancers();
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state">🎨 No freelancers found. Add freelancers from the Freelancers page.</div>';
+      return;
+    }
+    container.innerHTML = filtered.map(f => {
+      const name = f.name || f.full_name || 'Freelancer';
+      const rate = parseFloat(f.hourlyRate || f.salary || 50) || 50;
+      return `
+        <div class="talent-card">
+          <div class="card-header"><h3>${escapeHtml(name)}</h3><div class="rating">★ ${Number(f.rating || 0).toFixed(1)}</div></div>
+          <div class="card-body">
+            <div><strong>${escapeHtml(f.skills || 'General')}</strong></div>
+            <div>💰 Rate: $${rate.toLocaleString()}/hour</div>
+            <div>📊 Experience: ${escapeHtml(f.experience || 'Available')}</div>
+            <div>🌍 Timezone: ${escapeHtml(f.timezone || 'Flexible')}</div>
+            <div class="commission-row"><strong>Our commission:</strong> 25% of project value</div>
+            <button class="btn-match" onclick="openMatchModal('${f.id}')">🤝 Match with Request</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderRequests() {
+    const container = document.getElementById('requestsSection');
+    if (requests.length === 0) {
+      container.innerHTML = '<div class="empty-state">📋 No talent requests yet. Click "+ New Request" to create one.</div>';
+      return;
+    }
+    container.innerHTML = requests.map(r => `
+      <div class="request-card">
+        <div class="card-header"><h3>🏢 ${escapeHtml(r.companyName)}</h3><div><span class="skill-tag">${escapeHtml(r.skill)}</span></div></div>
+        <div class="card-body">
+          <div><strong>Need:</strong> ${escapeHtml(r.skill || 'Talent')}</div>
+          <div>📝 Description: ${escapeHtml(r.description || '-')}</div>
+          <div class="price">💰 Budget: $${(parseFloat(r.budget) || 0).toLocaleString()}</div>
+          <div>📅 Timeline: ${escapeHtml(r.timeline || '-')}</div>
+          <div>Status: ${escapeHtml(r.status || 'Open')}</div>
+          <div class="commission-row"><strong>Our commission (25%):</strong> $${Math.round((parseFloat(r.budget) || 0) * 0.25).toLocaleString()}</div>
+          <button class="btn-match" onclick="openMatchForRequest('${r.id}')">🔍 Find Talent</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function renderPlacements() {
+    const container = document.getElementById('placementsSection');
+    if (placements.length === 0) {
+      container.innerHTML = '<div class="empty-state">🤝 No active placements yet. Match freelancers with requests to create placements.</div>';
+      return;
+    }
+    container.innerHTML = placements.map(p => `
+      <div class="placement-card">
+        <div class="card-header"><h3>${escapeHtml(p.freelancerName)} → ${escapeHtml(p.companyName)}</h3><div><span class="skill-tag">${escapeHtml(p.status || 'Active')}</span></div></div>
+        <div class="card-body">
+          <div>💰 Client pays: <strong>$${(parseFloat(p.budget) || 0).toLocaleString()}</strong></div>
+          <div>👤 Freelancer earns: $${(parseFloat(p.freelancerEarn) || 0).toLocaleString()}</div>
+          <div class="commission-row"><strong>Our profit:</strong> $${(parseFloat(p.ourProfit) || 0).toLocaleString()}</div>
+          <div>📅 Start: ${p.startDate || '-'}</div>
+        </div>
+      </div>`).join('');
+  }
+
+  function openAddRequestModal() {
+    document.getElementById('modalBody').innerHTML = `
+      <div class="field-group"><label class="field-label">COMPANY NAME *</label><input class="field-input" id="reqCompany"></div>
+      <div class="field-group"><label class="field-label">SKILL NEEDED</label><input class="field-input" id="reqSkill" placeholder="Design, Development, SEO..."></div>
+      <div class="field-group"><label class="field-label">BUDGET ($)</label><input class="field-input" type="number" id="reqBudget"></div>
+      <div class="field-group"><label class="field-label">TIMELINE</label><input class="field-input" id="reqTimeline" placeholder="2 weeks, 1 month..."></div>
+      <div class="field-group"><label class="field-label">DESCRIPTION</label><textarea class="field-textarea" id="reqDescription" rows="4"></textarea></div>`;
+    document.getElementById('modalFooter').innerHTML = '<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveRequestBtn">Create Request</button></div>';
+    document.getElementById('requestModal').style.display = 'flex';
+    document.getElementById('cancelModalBtn').onclick = closeModal;
+    document.getElementById('closeModalBtn').onclick = closeModal;
+    document.getElementById('saveRequestBtn').onclick = () => {
+      const data = {
+        companyName: document.getElementById('reqCompany').value.trim(),
+        skill: document.getElementById('reqSkill').value.trim(),
+        budget: parseFloat(document.getElementById('reqBudget').value) || 0,
+        timeline: document.getElementById('reqTimeline').value.trim(),
+        description: document.getElementById('reqDescription').value.trim(),
+        status: 'Open'
+      };
+      if (!data.companyName) return showToast('Company name required!', 'error');
+      addRequestToAPI(data);
+      closeModal();
+    };
+  }
+
+  function openMatchModal(freelancerId) {
+    const openRequests = requests.filter(r => r.status === 'Open');
+    if (openRequests.length === 0) return showToast('No open requests available!', 'error');
+    const requestOptions = openRequests.map(r => `<option value="${r.id}">${escapeHtml(r.companyName)} - ${escapeHtml(r.skill)} ($${(parseFloat(r.budget) || 0).toLocaleString()})</option>`).join('');
+    document.getElementById('modalBody').innerHTML = `
+      <div class="field-group"><label class="field-label">SELECT REQUEST</label><select class="field-select" id="matchRequest">${requestOptions}</select></div>
+      <div class="field-group"><label class="field-label">FINAL BUDGET ($)</label><input class="field-input" type="number" id="matchBudget" placeholder="Enter agreed budget"></div>
+      <div class="commission-row"><strong>Calculations:</strong><br>Client pays: $<span id="calcBudget">0</span><br>Freelancer earns (75%): $<span id="calcFreelancer">0</span><br>Our profit (25%): $<span id="calcProfit">0</span></div>`;
+    document.getElementById('modalFooter').innerHTML = '<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="confirmMatchBtn">Create Placement</button></div>';
+    document.getElementById('requestModal').style.display = 'flex';
+    wireBudgetCalculator();
+    document.getElementById('confirmMatchBtn').onclick = () => {
+      const requestId = document.getElementById('matchRequest').value;
+      const budget = parseFloat(document.getElementById('matchBudget').value) || 0;
+      if (!requestId || budget <= 0) return showToast('Please select request and enter budget', 'error');
+      createPlacement(freelancerId, requestId, budget);
+      closeModal();
+    };
+    document.getElementById('cancelModalBtn').onclick = closeModal;
+    document.getElementById('closeModalBtn').onclick = closeModal;
+  }
+
+  function openMatchForRequest(requestId) {
+    const request = requests.find(r => String(r.id) === String(requestId));
+    if (!request) return;
+    const availableFreelancers = freelancers.filter(f => String(f.skills || '').toLowerCase().includes(String(request.skill || '').toLowerCase()));
+    const list = availableFreelancers.length ? availableFreelancers : freelancers;
+    if (list.length === 0) return showToast('No freelancers found!', 'error');
+    const freelancerOptions = list.map(f => `<option value="${f.id}">${escapeHtml(f.name || f.full_name)} - $${parseFloat(f.hourlyRate || f.salary || 50).toLocaleString()}/hr (★ ${Number(f.rating || 0).toFixed(1)})</option>`).join('');
+    document.getElementById('modalBody').innerHTML = `
+      <div class="field-group"><label class="field-label">SELECT FREELANCER</label><select class="field-select" id="matchFreelancer">${freelancerOptions}</select></div>
+      <div class="field-group"><label class="field-label">FINAL BUDGET ($)</label><input class="field-input" type="number" id="matchBudget" value="${parseFloat(request.budget) || 0}"></div>
+      <div class="commission-row"><strong>Calculations:</strong><br>Client pays: $<span id="calcBudget">0</span><br>Freelancer earns (75%): $<span id="calcFreelancer">0</span><br>Our profit (25%): $<span id="calcProfit">0</span></div>`;
+    document.getElementById('modalFooter').innerHTML = '<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="confirmMatchBtn">Create Placement</button></div>';
+    document.getElementById('requestModal').style.display = 'flex';
+    wireBudgetCalculator();
+    document.getElementById('matchBudget').dispatchEvent(new Event('input'));
+    document.getElementById('confirmMatchBtn').onclick = () => {
+      const freelancerId = document.getElementById('matchFreelancer').value;
+      const budget = parseFloat(document.getElementById('matchBudget').value) || 0;
+      if (!freelancerId || budget <= 0) return showToast('Please select freelancer and enter budget', 'error');
+      createPlacement(freelancerId, requestId, budget);
+      closeModal();
+    };
+    document.getElementById('cancelModalBtn').onclick = closeModal;
+    document.getElementById('closeModalBtn').onclick = closeModal;
+  }
+
+  function wireBudgetCalculator() {
+    const budgetInput = document.getElementById('matchBudget');
+    budgetInput.oninput = () => {
+      const budget = parseFloat(budgetInput.value) || 0;
+      document.getElementById('calcBudget').innerText = budget.toLocaleString();
+      document.getElementById('calcFreelancer').innerText = (budget * 0.75).toLocaleString();
+      document.getElementById('calcProfit').innerText = (budget * 0.25).toLocaleString();
+    };
+  }
+
+  function closeModal() { document.getElementById('requestModal').style.display = 'none'; }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('freelancersSection').style.display = tab === 'freelancers' ? 'grid' : 'none';
+    document.getElementById('requestsSection').style.display = tab === 'requests' ? 'grid' : 'none';
+    document.getElementById('placementsSection').style.display = tab === 'placements' ? 'grid' : 'none';
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
+  }
+
+  function refreshData() { fetchAllData(); showToast('Data refreshed!'); }
+
+  function updateDate() {
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  window.openMatchModal = openMatchModal;
+  window.openMatchForRequest = openMatchForRequest;
+
+  document.getElementById('addRequestBtn').onclick = openAddRequestModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
+  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+  document.getElementById('closeModalBtn').onclick = closeModal;
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.onclick = () => switchTab(btn.dataset.tab));
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.onclick = () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter;
+      renderFreelancers();
+    };
+  });
+
+  updateDate();
+  fetchAllData();
+  setInterval(() => { if (localStorage.getItem('niche_token')) fetchAllData(); }, 60000);
+</script>
+</body>
+</html>

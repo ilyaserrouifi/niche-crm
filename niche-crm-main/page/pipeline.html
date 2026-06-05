@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Pipeline</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --cyan: #06b6d4;
+      --purple: #818cf8;
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: rgba(13, 16, 23, 0.98);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: white; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+    .nav-section {
+      color: #374151;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 20px 20px 8px 20px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      margin: 2px 12px;
+      border-radius: 10px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item i { width: 20px; font-size: 16px; font-style: normal; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+
+    .logout-wrapper {
+      margin-top: auto;
+      padding: 20px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .logout-btn {
+      width: 100%;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 12px;
+      color: #ef4444;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Main content */
+    .main-content {
+      margin-left: 260px;
+      padding: 24px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .page-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-add {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 8px;
+      padding: 10px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 13px;
+      transition: var(--transition);
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 20px;
+      transition: var(--transition);
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+    .color-purple { color: #818cf8; }
+    .color-green { color: #34d399; }
+    .color-gold { color: #fbbf24; }
+    .color-emerald { color: #10b981; }
+
+    /* Kanban Board */
+    .kanban-board {
+      display: flex;
+      gap: 20px;
+      overflow-x: auto;
+      padding-bottom: 16px;
+      min-height: 500px;
+    }
+    .kanban-column {
+      min-width: 280px;
+      width: 280px;
+      background: rgba(255,255,255,0.02);
+      border-radius: 16px;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      max-height: 70vh;
+    }
+    .column-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .column-title {
+      font-weight: 600;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .column-count {
+      background: rgba(255,255,255,0.1);
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 12px;
+    }
+    .column-cards {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+      min-height: 300px;
+    }
+    .pipeline-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 12px;
+      cursor: grab;
+      transition: var(--transition);
+    }
+    .pipeline-card:hover {
+      transform: translateX(2px);
+      border-color: rgba(43,47,255,0.3);
+      background: rgba(255,255,255,0.06);
+    }
+    .card-company {
+      font-weight: 700;
+      font-size: 14px;
+      color: white;
+      margin-bottom: 8px;
+    }
+    .card-contact {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .card-value {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--success-green);
+      margin-bottom: 8px;
+    }
+    .card-date {
+      font-size: 10px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .card-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .card-edit, .card-delete {
+      background: none;
+      border: none;
+      color: #6b7280;
+      cursor: pointer;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .card-edit:hover { background: rgba(43,47,255,0.2); color: var(--blue-primary); }
+    .card-delete:hover { background: rgba(239,68,68,0.2); color: var(--error-red); }
+
+    /* Loading spinner */
+    .loading-spinner {
+      text-align: center;
+      padding: 60px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(43,47,255,0.2);
+      border-top-color: #2b2fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #10b981;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 1100;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal {
+      background: #111520;
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      width: 550px;
+      max-width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 28px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 { font-size: 20px; font-weight: 700; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: #6b7280;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .field-group { margin-bottom: 14px; }
+    .field-label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .field-input, .field-select, .field-textarea {
+      width: 100%;
+      background: #1a1f2e;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: white;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .field-textarea { min-height: 80px; resize: vertical; }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 16px;
+      color: #9ca3af;
+      cursor: pointer;
+    }
+    .btn-save {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .kanban-board { flex-direction: column; align-items: center; }
+      .kanban-column { width: 100%; max-width: 400px; }
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/glass-nav.css" />
+  <script src="/assets/glass-nav.js" defer></script>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+  <a href="/page/pipeline.html" class="nav-item active"><i>🔀</i> <span>Pipeline</span></a>
+  <div class="nav-section">PEOPLE</div>
+  <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
+  <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
+  <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
+  <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  <div class="nav-section">WORK</div>
+  <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
+  <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
+  <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
+  <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title">
+      <h1>Sales Pipeline</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div class="header-actions">
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addDealBtn">+ Add Deal</button>
+    </div>
+  </div>
+
+  <!-- Stats KPI -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value color-purple" id="totalDeals">0</div><div class="stat-label">TOTAL DEALS</div></div>
+    <div class="stat-card"><div class="stat-value color-green" id="totalValue">$0</div><div class="stat-label">TOTAL VALUE</div></div>
+    <div class="stat-card"><div class="stat-value color-gold" id="wonDeals">0</div><div class="stat-label">WON DEALS</div></div>
+    <div class="stat-card"><div class="stat-value color-emerald" id="winRate">0%</div><div class="stat-label">WIN RATE</div></div>
+  </div>
+
+  <!-- Kanban Pipeline -->
+  <div class="kanban-board" id="kanbanBoard">
+    <div class="loading-spinner"><div class="spinner"></div>Loading pipeline...</div>
+  </div>
+</div>
+
+<!-- Modal Add/Edit Deal -->
+<div id="dealModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modalTitle">Add Deal</h3><button class="modal-close" id="closeModalBtn">✕</button></div>
+    <div id="modalBody"></div>
+    <div id="modalFooter"></div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // PIPELINE MANAGEMENT - COMPLETE WITH REAL API
+  // ============================================================
+  
+  // Check authentication
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+
+  // Pipeline stages
+  const STAGES = [
+    { id: 'lead', name: '🟡 LEAD', color: '#f59e0b' },
+    { id: 'contacted', name: '📞 CONTACTED', color: '#3b82f6' },
+    { id: 'meeting', name: '🤝 MEETING', color: '#06b6d4' },
+    { id: 'proposal', name: '📄 PROPOSAL', color: '#8b5cf6' },
+    { id: 'negotiation', name: '⚖️ NEGOTIATION', color: '#ec4899' },
+    { id: 'won', name: '✅ WON', color: '#10b981' },
+    { id: 'lost', name: '❌ LOST', color: '#ef4444' }
+  ];
+
+  let deals = [];
+  let currentDealId = null;
+
+  const API_BASE = '/api';
+
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  async function fetchDealsFromAPI() {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/pipeline/deals`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        deals = await response.json();
+        saveDealsToLocal();
+        renderAll();
+      } else {
+        loadDealsFromLocal();
+      }
+    } catch (error) {
+      console.error('API error:', error);
+      loadDealsFromLocal();
+    }
+  }
+
+  function loadDealsFromLocal() {
+    const stored = localStorage.getItem('pipeline_deals');
+    deals = stored ? JSON.parse(stored) : [];
+    renderAll();
+  }
+
+  function saveDealsToLocal() {
+    localStorage.setItem('pipeline_deals', JSON.stringify(deals));
+  }
+
+  function addDealLocal(deal) {
+    deal.id = Date.now().toString();
+    deal.createdAt = new Date().toISOString();
+    deal.stage = 'lead';
+    deals.push(deal);
+    saveDealsToLocal();
+    renderAll();
+    showToast('Deal added successfully!');
+  }
+
+  function updateDealLocal(id, data) {
+    const idx = deals.findIndex(d => d.id === id);
+    if (idx !== -1) {
+      deals[idx] = { ...deals[idx], ...data };
+      saveDealsToLocal();
+      renderAll();
+      showToast('Deal updated!');
+    }
+  }
+
+  function deleteDealLocal(id) {
+    deals = deals.filter(d => d.id !== id);
+    saveDealsToLocal();
+    renderAll();
+    showToast('Deal deleted!');
+  }
+
+  function updateDealStage(dealId, newStage) {
+    const idx = deals.findIndex(d => d.id === dealId);
+    if (idx !== -1) {
+      deals[idx].stage = newStage;
+      saveDealsToLocal();
+      renderAll();
+      showToast(`Deal moved to ${newStage.toUpperCase()}!`);
+    }
+  }
+
+  function refreshData() {
+    document.getElementById('kanbanBoard').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Refreshing...</div>';
+    fetchDealsFromAPI();
+    showToast('Data refreshed!');
+  }
+
+  function renderAll() {
+    updateStats();
+    renderKanban();
+  }
+
+  function updateStats() {
+    const total = deals.length;
+    const totalValue = deals.reduce((sum, d) => sum + (parseFloat(d.value) || 0), 0);
+    const wonDeals = deals.filter(d => d.stage === 'won').length;
+    const winRate = deals.filter(d => d.stage === 'won' || d.stage === 'lost').length > 0 
+      ? ((wonDeals / deals.filter(d => d.stage === 'won' || d.stage === 'lost').length) * 100).toFixed(1)
+      : 0;
+    
+    document.getElementById('totalDeals').innerText = total;
+    document.getElementById('totalValue').innerText = '$' + totalValue.toLocaleString();
+    document.getElementById('wonDeals').innerText = wonDeals;
+    document.getElementById('winRate').innerText = winRate + '%';
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  function renderKanban() {
+    const container = document.getElementById('kanbanBoard');
+    
+    if (deals.length === 0) {
+      container.innerHTML = '<div class="empty-state" style="width:100%; text-align:center; padding:60px;">📌 No deals yet. Click "+ Add Deal" to create your first pipeline deal.</div>';
+      return;
+    }
+
+    let html = '';
+    for (const stage of STAGES) {
+      const stageDeals = deals.filter(d => d.stage === stage.id);
+      html += `
+        <div class="kanban-column">
+          <div class="column-header">
+            <span class="column-title">${stage.name}</span>
+            <span class="column-count">${stageDeals.length}</span>
+          </div>
+          <div class="column-cards" data-stage="${stage.id}">
+            ${stageDeals.length === 0 ? '<div class="empty-state">Drop deals here</div>' : ''}
+            ${stageDeals.map(deal => `
+              <div class="pipeline-card" draggable="true" data-id="${deal.id}" data-stage="${stage.id}">
+                <div class="card-company">${escapeHtml(deal.company) || 'Unnamed'}</div>
+                <div class="card-contact">${escapeHtml(deal.contact) || ''} • ${escapeHtml(deal.email) || ''}</div>
+                <div class="card-value">$${(parseFloat(deal.value) || 0).toLocaleString()}</div>
+                <div class="card-date">📅 ${deal.expectedClose || 'No date'}</div>
+                <div class="card-actions">
+                  <button class="card-edit" onclick="openEditDeal('${deal.id}')">✏️ Edit</button>
+                  <button class="card-delete" onclick="if(confirm('Delete this deal?')) deleteDealLocal('${deal.id}')">🗑️ Delete</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+    container.innerHTML = html;
+    
+    // Add drag and drop handlers
+    document.querySelectorAll('.pipeline-card').forEach(card => {
+      card.addEventListener('dragstart', handleDragStart);
+      card.addEventListener('dragend', handleDragEnd);
+    });
+    document.querySelectorAll('.column-cards').forEach(column => {
+      column.addEventListener('dragover', handleDragOver);
+      column.addEventListener('drop', handleDrop);
+    });
+  }
+
+  let draggedItem = null;
+
+  function handleDragStart(e) {
+    draggedItem = this;
+    e.dataTransfer.setData('text/plain', this.dataset.id);
+    this.style.opacity = '0.5';
+  }
+
+  function handleDragEnd(e) {
+    if (draggedItem) draggedItem.style.opacity = '';
+    draggedItem = null;
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    const targetColumn = this.closest('.kanban-column');
+    if (!targetColumn) return;
+    const newStage = this.dataset.stage || targetColumn.querySelector('.column-cards')?.dataset.stage;
+    if (!newStage) return;
+    
+    const dealId = e.dataTransfer.getData('text/plain');
+    if (dealId) {
+      updateDealStage(dealId, newStage);
+    }
+  }
+
+  function openAddDealModal() {
+    currentDealId = null;
+    document.getElementById('modalTitle').innerText = 'Add Deal';
+    document.getElementById('modalBody').innerHTML = getDealFormHtml({});
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Deal</button></div>`;
+    document.getElementById('dealModal').style.display = 'flex';
+    attachDealModalEvents(true);
+  }
+
+  function openEditDeal(id) {
+    currentDealId = id;
+    const deal = deals.find(d => d.id === id);
+    document.getElementById('modalTitle').innerText = 'Edit Deal';
+    document.getElementById('modalBody').innerHTML = getDealFormHtml(deal);
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`;
+    document.getElementById('dealModal').style.display = 'flex';
+    attachDealModalEvents(false);
+  }
+
+  function getDealFormHtml(deal) {
+    return `
+      <div class="field-group"><label class="field-label">COMPANY NAME *</label><input class="field-input" id="dealCompany" value="${escapeHtml(deal?.company || '')}"></div>
+      <div class="field-group"><label class="field-label">CONTACT PERSON</label><input class="field-input" id="dealContact" value="${escapeHtml(deal?.contact || '')}"></div>
+      <div class="field-group"><label class="field-label">EMAIL</label><input class="field-input" id="dealEmail" value="${escapeHtml(deal?.email || '')}"></div>
+      <div class="field-group"><label class="field-label">PHONE</label><input class="field-input" id="dealPhone" value="${escapeHtml(deal?.phone || '')}"></div>
+      <div class="field-group"><label class="field-label">DEAL VALUE ($)</label><input class="field-input" type="number" id="dealValue" value="${deal?.value || 0}"></div>
+      <div class="field-group"><label class="field-label">EXPECTED CLOSE DATE</label><input class="field-input" type="date" id="dealExpectedClose" value="${deal?.expectedClose || ''}"></div>
+      <div class="field-group"><label class="field-label">NOTES</label><textarea class="field-textarea" id="dealNotes">${escapeHtml(deal?.notes || '')}</textarea></div>
+    `;
+  }
+
+  function attachDealModalEvents(isAdd) {
+    document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('dealModal').style.display = 'none');
+    document.getElementById('saveModalBtn')?.addEventListener('click', () => {
+      const data = {
+        company: document.getElementById('dealCompany')?.value,
+        contact: document.getElementById('dealContact')?.value,
+        email: document.getElementById('dealEmail')?.value,
+        phone: document.getElementById('dealPhone')?.value,
+        value: parseFloat(document.getElementById('dealValue')?.value) || 0,
+        expectedClose: document.getElementById('dealExpectedClose')?.value,
+        notes: document.getElementById('dealNotes')?.value
+      };
+      if (!data.company) {
+        showToast('Company name is required!', 'error');
+        return;
+      }
+      if (isAdd) addDealLocal(data);
+      else updateDealLocal(currentDealId, data);
+      document.getElementById('dealModal').style.display = 'none';
+    });
+  }
+
+  function updateDate() {
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  }
+
+  // Event listeners
+  document.getElementById('addDealBtn').onclick = openAddDealModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
+  document.getElementById('closeModalBtn').onclick = () => document.getElementById('dealModal').style.display = 'none';
+  document.getElementById('logoutBtn').onclick = () => { 
+    localStorage.clear(); 
+    window.location.href = '/login.html'; 
+  };
+
+  // Initial load
+  updateDate();
+  fetchDealsFromAPI();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      fetchDealsFromAPI();
+    }
+  }, 60000);
+</script>
+</body>
+</html>

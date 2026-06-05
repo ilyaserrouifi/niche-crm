@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Clients Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --cyan: #06b6d4;
+      --purple: #818cf8;
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: rgba(13, 16, 23, 0.98);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: white; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+    .nav-section {
+      color: #374151;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 20px 20px 8px 20px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      margin: 2px 12px;
+      border-radius: 10px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item i { width: 20px; font-size: 16px; font-style: normal; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+
+    .logout-wrapper {
+      margin-top: auto;
+      padding: 20px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .logout-btn {
+      width: 100%;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 12px;
+      color: #ef4444;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Main content */
+    .main-content {
+      margin-left: 260px;
+      padding: 24px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .page-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .btn-add {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 30px;
+      padding: 8px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 12px;
+      transition: var(--transition);
+      margin-left: 10px;
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 20px;
+      transition: var(--transition);
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+    .color-violet { color: #818cf8; }
+    .color-green { color: #34d399; }
+    .color-gold { color: #fbbf24; }
+    .color-emerald { color: #10b981; }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .filter-chip {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 30px;
+      padding: 6px 16px;
+      color: #9ca3af;
+      font-size: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .filter-chip.active { background: rgba(43,47,255,0.15); color: var(--blue-primary); border-color: var(--blue-primary); }
+    .filter-chip:hover { background: rgba(43,47,255,0.1); color: white; }
+
+    /* Clients grid */
+    .clients-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .client-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .client-card:hover { transform: translateX(4px); border-color: rgba(43,47,255,0.3); }
+    .card-header {
+      background: rgba(43,47,255,0.1);
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .card-header h3 { font-size: 18px; font-weight: 600; color: white; }
+    .status-badge {
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .status-active { background: rgba(16,185,129,0.2); color: #10b981; }
+    .status-inactive { background: rgba(239,68,68,0.2); color: #ef4444; }
+    .status-pending { background: rgba(245,158,11,0.2); color: #f59e0b; }
+
+    .card-body { padding: 24px; }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .info-item .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-item .value { font-size: 14px; font-weight: 500; color: white; margin-top: 4px; }
+
+    .stats-detail {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-detail-card {
+      background: rgba(255,255,255,0.03);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-detail-number { font-size: 20px; font-weight: 700; }
+    .stat-detail-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .btn-projects, .btn-invoices, .btn-edit, .btn-delete {
+      flex: 1;
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      color: #9ca3af;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition);
+    }
+    .btn-projects:hover, .btn-invoices:hover, .btn-edit:hover { background: rgba(43,47,255,0.15); color: white; }
+    .btn-delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    /* Loading spinner */
+    .loading-spinner {
+      text-align: center;
+      padding: 40px;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(43,47,255,0.2);
+      border-top-color: #2b2fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #10b981;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 1100;
+      animation: slideIn 0.3s ease;
+    }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal {
+      background: #111520;
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      width: 750px;
+      max-width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 28px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-header h3 { font-size: 20px; font-weight: 700; }
+    .modal-close {
+      background: none;
+      border: none;
+      color: #6b7280;
+      font-size: 20px;
+      cursor: pointer;
+    }
+    .field-group { margin-bottom: 14px; }
+    .field-label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .field-input, .field-select, .field-textarea {
+      width: 100%;
+      background: #1a1f2e;
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: white;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .field-textarea { min-height: 80px; resize: vertical; }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 8px 16px;
+      color: #9ca3af;
+      cursor: pointer;
+    }
+    .btn-save {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Tables */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 10px 8px;
+      color: #4b5563;
+      font-size: 10px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .data-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px;
+      color: #d1d5db;
+    }
+    .project-status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+    }
+    .status-live { background: rgba(16,185,129,0.2); color: #10b981; }
+    .status-progress { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .status-pending { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    .invoice-paid { color: #10b981; }
+    .invoice-pending { color: #f59e0b; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .info-grid { grid-template-columns: repeat(2,1fr); }
+      .stats-detail { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/glass-nav.css" />
+  <script src="/assets/glass-nav.js" defer></script>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Pipeline</span></a>
+  <div class="nav-section">PEOPLE</div>
+  <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
+  <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
+  <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
+  <a href="/page/clients.html" class="nav-item active"><i>🏢</i> <span>Clients</span></a>
+  <div class="nav-section">WORK</div>
+  <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
+  <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
+  <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
+  <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title">
+      <h1>Clients</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div>
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addClientBtn">+ Add Client</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value color-violet" id="totalClients">0</div><div class="stat-label">TOTAL CLIENTS</div></div>
+    <div class="stat-card"><div class="stat-value color-green" id="activeClients">0</div><div class="stat-label">ACTIVE</div></div>
+    <div class="stat-card"><div class="stat-value color-gold" id="totalRevenue">$0</div><div class="stat-label">TOTAL REVENUE</div></div>
+    <div class="stat-card"><div class="stat-value color-emerald" id="activeProjects">0</div><div class="stat-label">ACTIVE PROJECTS</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-chip active" data-filter="all">🔍 All Clients</div>
+    <div class="filter-chip" data-filter="revenue">💰 Revenue: Highest First</div>
+    <div class="filter-chip" data-filter="active">✅ Active Only</div>
+    <div class="filter-chip" data-filter="recent">📅 Recently Added</div>
+  </div>
+
+  <div id="clientsContainer" class="clients-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading clients...</div>
+  </div>
+</div>
+
+<!-- Modal Add/Edit Client -->
+<div id="clientModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modalTitle">Add Client</h3><button class="modal-close" id="closeModalBtn">✕</button></div>
+    <div id="modalBody"></div>
+    <div id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- Modal Projects -->
+<div id="projectsModal" class="modal-overlay">
+  <div class="modal" style="width: 850px;">
+    <div class="modal-header"><h3 id="projectsTitle">Projects</h3><button class="modal-close" id="closeProjectsModalBtn">✕</button></div>
+    <div id="projectsBody"></div>
+    <div class="modal-footer"><button class="btn-cancel" id="closeProjectsFooterBtn">Close</button><button class="btn-save" id="addProjectBtn">+ Add Project</button></div>
+  </div>
+</div>
+
+<!-- Modal Invoices -->
+<div id="invoicesModal" class="modal-overlay">
+  <div class="modal" style="width: 700px;">
+    <div class="modal-header"><h3 id="invoicesTitle">Invoices</h3><button class="modal-close" id="closeInvoicesBtn">✕</button></div>
+    <div id="invoicesBody"></div>
+    <div class="modal-footer"><button class="btn-cancel" id="closeInvoicesFooterBtn">Close</button><button class="btn-save" id="addInvoiceBtn">+ Add Invoice</button></div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // CLIENTS MANAGEMENT - CONNECTED TO REAL API
+  // ============================================================
+  
+  // Check authentication
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+  
+  let clients = [];
+  let currentClientId = null;
+  let currentProjectsClientId = null;
+  let currentInvoicesClientId = null;
+  let currentFilter = 'all';
+  
+  const API_BASE = '/api';
+  
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+  
+  async function fetchClientsFromAPI() {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/clients`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        clients = await response.json();
+        saveClientsToLocal();
+        renderAll();
+      } else {
+        loadFromLocal();
+      }
+    } catch (error) {
+      console.error('API error:', error);
+      loadFromLocal();
+    }
+  }
+  
+  function loadFromLocal() {
+    const stored = localStorage.getItem('clients_data_v2');
+    clients = stored ? JSON.parse(stored) : [];
+    renderAll();
+  }
+  
+  function saveClientsToLocal() {
+    localStorage.setItem('clients_data_v2', JSON.stringify(clients));
+  }
+  
+  function getClients() { return clients; }
+  function saveClients() { saveClientsToLocal(); renderAll(); }
+
+  async function addClientToAPI(client) {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/clients`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(client)
+      });
+      if (response.ok) {
+        const newClient = await response.json();
+        clients.push(newClient);
+        saveClientsToLocal();
+        renderAll();
+        showToast('Client added successfully!');
+      } else {
+        addClientLocal(client);
+      }
+    } catch (error) {
+      addClientLocal(client);
+    }
+  }
+  
+  function addClientLocal(client) {
+    client.id = Date.now().toString();
+    client.createdAt = new Date().toISOString().split('T')[0];
+    client.projects = [];
+    client.invoices = [];
+    client.status = client.status || 'active';
+    clients.push(client);
+    saveClients();
+    showToast('Client added locally!');
+  }
+
+  function updateClientLocal(id, data) {
+    const idx = clients.findIndex(c => c.id === id);
+    if(idx !== -1) {
+      clients[idx] = { ...clients[idx], ...data };
+      saveClients();
+      showToast('Client updated!');
+    }
+  }
+
+  function deleteClientLocal(id) { 
+    clients = clients.filter(c => c.id !== id); 
+    saveClients(); 
+    showToast('Client deleted!');
+  }
+
+  function addProjectLocal(clientId, project) {
+    const client = clients.find(c => c.id === clientId);
+    if(client) {
+      project.id = Date.now().toString();
+      project.createdAt = new Date().toISOString();
+      client.projects = client.projects || [];
+      client.projects.push(project);
+      saveClients();
+      showToast('Project added!');
+    }
+  }
+
+  function addInvoiceLocal(clientId, invoice) {
+    const client = clients.find(c => c.id === clientId);
+    if(client) {
+      invoice.id = Date.now().toString();
+      invoice.createdAt = new Date().toISOString();
+      client.invoices = client.invoices || [];
+      client.invoices.push(invoice);
+      saveClients();
+      showToast('Invoice added!');
+    }
+  }
+
+  function renderAll() { updateStats(); renderClients(); }
+
+  function updateStats() {
+    const total = clients.length;
+    const active = clients.filter(c => c.status === 'active').length;
+    const totalRev = clients.reduce((sum, c) => sum + (parseFloat(c.budget) || 0), 0);
+    const activeProj = clients.reduce((sum, c) => sum + (c.projects?.filter(p => p.status === 'Live' || p.status === 'In Progress').length || 0), 0);
+    document.getElementById('totalClients').innerText = total;
+    document.getElementById('activeClients').innerText = active;
+    document.getElementById('totalRevenue').innerText = '$' + totalRev.toLocaleString();
+    document.getElementById('activeProjects').innerText = activeProj;
+  }
+
+  function getFilteredClients() {
+    let filtered = [...clients];
+    if (currentFilter === 'active') {
+      filtered = filtered.filter(c => c.status === 'active');
+    } else if (currentFilter === 'revenue') {
+      filtered.sort((a, b) => (b.budget || 0) - (a.budget || 0));
+    } else if (currentFilter === 'recent') {
+      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+    return filtered;
+  }
+
+  function renderClients() {
+    const container = document.getElementById('clientsContainer');
+    const filteredClients = getFilteredClients();
+    
+    if(filteredClients.length === 0) { 
+      container.innerHTML = '<div class="empty-state">No clients yet. Click "+ Add Client" to get started.</div>'; 
+      return; 
+    }
+    
+    container.innerHTML = filteredClients.map(c => {
+      const projectsCount = c.projects?.length || 0;
+      const invoicesCount = c.invoices?.length || 0;
+      const totalInvoiced = c.invoices?.reduce((sum, i) => sum + (i.amount || 0), 0) || 0;
+      let statusClass = 'status-active';
+      if(c.status === 'inactive') statusClass = 'status-inactive';
+      if(c.status === 'pending') statusClass = 'status-pending';
+      let statusText = c.status === 'active' ? 'Active' : (c.status === 'inactive' ? 'Inactive' : 'Pending');
+      return `
+        <div class="client-card">
+          <div class="card-header"><h3>${escapeHtml(c.company) || 'Unnamed'}</h3><div class="status-badge ${statusClass}">${statusText}</div></div>
+          <div class="card-body">
+            <div class="info-grid">
+              <div class="info-item"><div class="label">CONTACT</div><div class="value">${escapeHtml(c.contact) || '-'}</div></div>
+              <div class="info-item"><div class="label">EMAIL</div><div class="value">${escapeHtml(c.email) || '-'}</div></div>
+              <div class="info-item"><div class="label">PHONE</div><div class="value">${escapeHtml(c.phone) || '-'}</div></div>
+              <div class="info-item"><div class="label">NICHE</div><div class="value">${escapeHtml(c.niche) || '-'}</div></div>
+            </div>
+            <div class="info-grid">
+              <div class="info-item"><div class="label">BUDGET</div><div class="value">$${(parseFloat(c.budget) || 0).toLocaleString()}</div></div>
+              <div class="info-item"><div class="label">INVOICED</div><div class="value">$${totalInvoiced.toLocaleString()}</div></div>
+              <div class="info-item"><div class="label">SINCE</div><div class="value">${c.createdAt || '-'}</div></div>
+              <div class="info-item"><div class="label">STATUS</div><div class="value">${c.status || 'active'}</div></div>
+            </div>
+            <div class="stats-detail">
+              <div class="stat-detail-card"><div class="stat-detail-number">${projectsCount}</div><div class="stat-detail-label">📁 Projects</div></div>
+              <div class="stat-detail-card"><div class="stat-detail-number">${invoicesCount}</div><div class="stat-detail-label">📄 Invoices</div></div>
+              <div class="stat-detail-card"><div class="stat-detail-number">$${totalInvoiced.toLocaleString()}</div><div class="stat-detail-label">💰 Paid</div></div>
+            </div>
+            <div class="action-buttons">
+              <div class="btn-projects" onclick="openProjectsModal('${c.id}')">📋 Projects (${projectsCount})</div>
+              <div class="btn-invoices" onclick="openInvoicesModal('${c.id}')">📄 Invoices (${invoicesCount})</div>
+            </div>
+            <div class="action-buttons" style="margin-top:8px">
+              <div class="btn-edit" onclick="openEditClient('${c.id}')">✏️ Edit</div>
+              <div class="btn-delete" onclick="if(confirm('Delete this client?')) deleteClientLocal('${c.id}')">🗑️ Delete</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  function openAddClientModal() { 
+    currentClientId = null; 
+    document.getElementById('modalTitle').innerText = 'Add Client'; 
+    document.getElementById('modalBody').innerHTML = getClientFormHtml({}); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Client</button></div>`; 
+    document.getElementById('clientModal').style.display = 'flex'; 
+    attachClientModalEvents(true); 
+  }
+  
+  function openEditClient(id) { 
+    currentClientId = id; 
+    const c = clients.find(c => c.id === id); 
+    document.getElementById('modalTitle').innerText = 'Edit Client'; 
+    document.getElementById('modalBody').innerHTML = getClientFormHtml(c); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; 
+    document.getElementById('clientModal').style.display = 'flex'; 
+    attachClientModalEvents(false); 
+  }
+
+  function getClientFormHtml(c) {
+    return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+      <div><div class="field-group"><label class="field-label">COMPANY NAME</label><input class="field-input" id="cCompany" value="${escapeHtml(c.company || '')}"></div>
+      <div class="field-group"><label class="field-label">CONTACT PERSON</label><input class="field-input" id="cContact" value="${escapeHtml(c.contact || '')}"></div>
+      <div class="field-group"><label class="field-label">EMAIL</label><input class="field-input" id="cEmail" value="${escapeHtml(c.email || '')}"></div>
+      <div class="field-group"><label class="field-label">PHONE</label><input class="field-input" id="cPhone" value="${escapeHtml(c.phone || '')}"></div>
+      <div class="field-group"><label class="field-label">NICHE / INDUSTRY</label><input class="field-input" id="cNiche" value="${escapeHtml(c.niche || '')}"></div></div>
+      <div><div class="field-group"><label class="field-label">BUDGET / CONTRACT ($)</label><input class="field-input" type="number" id="cBudget" value="${c.budget || 0}"></div>
+      <div class="field-group"><label class="field-label">STATUS</label><select class="field-select" id="cStatus"><option ${c.status==='active'?'selected':''}>active</option><option ${c.status==='inactive'?'selected':''}>inactive</option><option ${c.status==='pending'?'selected':''}>pending</option></select></div>
+      <div class="field-group"><label class="field-label">ADDRESS</label><textarea class="field-textarea" id="cAddress">${escapeHtml(c.address || '')}</textarea></div></div>
+    </div>`;
+  }
+
+  function attachClientModalEvents(isAdd) {
+    document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('clientModal').style.display = 'none');
+    document.getElementById('saveModalBtn')?.addEventListener('click', () => {
+      const data = {
+        company: document.getElementById('cCompany')?.value,
+        contact: document.getElementById('cContact')?.value,
+        email: document.getElementById('cEmail')?.value,
+        phone: document.getElementById('cPhone')?.value,
+        niche: document.getElementById('cNiche')?.value,
+        budget: parseFloat(document.getElementById('cBudget')?.value) || 0,
+        status: document.getElementById('cStatus')?.value,
+        address: document.getElementById('cAddress')?.value
+      };
+      if(isAdd) addClientLocal(data);
+      else updateClientLocal(currentClientId, data);
+      document.getElementById('clientModal').style.display = 'none';
+    });
+  }
+
+  function openProjectsModal(clientId) {
+    currentProjectsClientId = clientId;
+    const c = clients.find(c => c.id === clientId);
+    document.getElementById('projectsTitle').innerText = `Projects — ${c.company}`;
+    const projects = c.projects || [];
+    if(projects.length === 0) { document.getElementById('projectsBody').innerHTML = '<div class="empty-state">No projects yet.</div>'; }
+    else {
+      let html = '<table class="data-table"><thead><tr><th>PROJECT</th><th>STATUS</th><th>PROGRESS</th><th>DEADLINE</th><th>BUDGET</th></tr></thead><tbody>';
+      projects.forEach(p => {
+        let statusClass = 'status-pending';
+        if(p.status === 'Live') statusClass = 'status-live';
+        else if(p.status === 'In Progress') statusClass = 'status-progress';
+        html += `<tr>
+          <td><strong>${escapeHtml(p.name) || '-'}</strong></td>
+          <td><span class="project-status ${statusClass}">${p.status || 'Pending'}</span></td>
+          <td><div style="width:80px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;display:inline-block;margin-right:6px"><div style="width:${p.progress || 0}%;height:100%;background:#4f46e5;border-radius:2px"></div></div>${p.progress || 0}%</div></td>
+          <td>${p.deadline || '-'}</td>
+          <td>$${(p.budget || 0).toLocaleString()}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('projectsBody').innerHTML = html;
+    }
+    document.getElementById('projectsModal').style.display = 'flex';
+  }
+
+  function addProjectToClient() {
+    const name = prompt('Project name:');
+    if(!name) return;
+    const status = prompt('Status (Live / In Progress / Completed / Pending):', 'Pending');
+    const progress = parseInt(prompt('Progress % (0-100):', '0')) || 0;
+    const deadline = prompt('Deadline (YYYY-MM-DD):', '');
+    const budget = parseFloat(prompt('Budget ($):', '0')) || 0;
+    addProjectLocal(currentProjectsClientId, { name, status, progress, deadline, budget });
+    openProjectsModal(currentProjectsClientId);
+  }
+
+  function openInvoicesModal(clientId) {
+    currentInvoicesClientId = clientId;
+    const c = clients.find(c => c.id === clientId);
+    document.getElementById('invoicesTitle').innerText = `Invoices — ${c.company}`;
+    const invoices = c.invoices || [];
+    if(invoices.length === 0) { document.getElementById('invoicesBody').innerHTML = '<div class="empty-state">No invoices yet.</div>'; }
+    else {
+      let html = '<table class="data-table"><thead><tr><th>INVOICE #</th><th>AMOUNT</th><th>DATE</th><th>DUE DATE</th><th>STATUS</th></tr></thead><tbody>';
+      invoices.forEach(i => {
+        html += `<tr>
+          <td>${escapeHtml(i.number) || '-'}</td>
+          <td class="${i.status === 'Paid' ? 'invoice-paid' : 'invoice-pending'}">$${(i.amount || 0).toLocaleString()}</td>
+          <td>${i.date || '-'}</td>
+          <td>${i.dueDate || '-'}</td>
+          <td>${i.status || 'Pending'}</td>
+        </tr>`;
+      });
+      html += '</tbody></tr>';
+      document.getElementById('invoicesBody').innerHTML = html;
+    }
+    document.getElementById('invoicesModal').style.display = 'flex';
+  }
+
+  function addInvoiceToClient() {
+    const number = prompt('Invoice number:');
+    if(!number) return;
+    const amount = parseFloat(prompt('Amount ($):', '0')) || 0;
+    const date = prompt('Date (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+    const dueDate = prompt('Due Date (YYYY-MM-DD):', '');
+    const status = prompt('Status (Paid / Pending / Overdue):', 'Pending');
+    addInvoiceLocal(currentInvoicesClientId, { number, amount, date, dueDate, status });
+    openInvoicesModal(currentInvoicesClientId);
+  }
+
+  function refreshData() {
+    document.getElementById('clientsContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Refreshing...</div>';
+    fetchClientsFromAPI();
+  }
+
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); 
+  }
+
+  // Filter chips
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter || 'all';
+      renderClients();
+    });
+  });
+
+  document.getElementById('addClientBtn').onclick = openAddClientModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
+  document.getElementById('closeModalBtn').onclick = () => document.getElementById('clientModal').style.display = 'none';
+  document.getElementById('closeProjectsModalBtn').onclick = () => document.getElementById('projectsModal').style.display = 'none';
+  document.getElementById('closeProjectsFooterBtn').onclick = () => document.getElementById('projectsModal').style.display = 'none';
+  document.getElementById('addProjectBtn').onclick = addProjectToClient;
+  document.getElementById('closeInvoicesBtn').onclick = () => document.getElementById('invoicesModal').style.display = 'none';
+  document.getElementById('closeInvoicesFooterBtn').onclick = () => document.getElementById('invoicesModal').style.display = 'none';
+  document.getElementById('addInvoiceBtn').onclick = addInvoiceToClient;
+  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+
+  // Initial load
+  updateDate();
+  fetchClientsFromAPI();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      fetchClientsFromAPI();
+    }
+  }, 60000);
+</script>
+</body>
+</html>

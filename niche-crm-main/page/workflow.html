@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Niche CRM — Workflow Guide</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.45);
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --error-red: #ef4444;
+      --purple: #818cf8;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+    }
+    .sidebar {
+      position: fixed; left: 0; top: 0; width: 260px; height: 100vh;
+      background: rgba(13,16,23,0.98);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100; display: flex; flex-direction: column; overflow-y: auto;
+    }
+    .sidebar-brand {
+      padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+      border-bottom: 1px solid var(--border-subtle); text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; }
+    .nav-section { color: #374151; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; padding: 20px 20px 8px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 10px 20px;
+      color: var(--text-muted); text-decoration: none; font-size: 14px; transition: all 0.2s;
+    }
+    .nav-item:hover, .nav-item.active { color: white; background: rgba(43,47,255,0.1); }
+    .nav-item.active { border-right: 2px solid var(--blue-primary); }
+    .main-content { margin-left: 260px; padding: 32px 40px 60px; max-width: 1100px; position: relative; z-index: 1; }
+    .page-header { margin-bottom: 32px; }
+    .page-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .page-header .subtitle { color: var(--text-muted); font-size: 15px; }
+    .lang-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+    .lang-tab {
+      padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-subtle);
+      background: transparent; color: var(--text-muted); cursor: pointer; font-family: inherit; font-size: 13px;
+    }
+    .lang-tab.active { background: var(--blue-primary); color: white; border-color: var(--blue-primary); }
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 18px; font-weight: 700; margin-bottom: 16px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-title .num {
+      background: var(--blue-primary); color: white; width: 28px; height: 28px;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px;
+    }
+    .card {
+      background: var(--surface-card); border: 1px solid var(--border-subtle);
+      border-radius: 12px; padding: 20px; margin-bottom: 16px;
+    }
+    .flow-diagram {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 20px;
+      background: rgba(43,47,255,0.06); border-radius: 12px; border: 1px solid rgba(43,47,255,0.2);
+      font-size: 13px; margin-bottom: 16px;
+    }
+    .flow-step {
+      background: rgba(255,255,255,0.06); padding: 10px 14px; border-radius: 8px;
+      border: 1px solid var(--border-subtle); white-space: nowrap;
+    }
+    .flow-arrow { color: var(--blue-primary); font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border-subtle); }
+    th { color: var(--text-muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    }
+    .badge-ok { background: rgba(16,185,129,0.15); color: var(--success-green); }
+    .badge-warn { background: rgba(245,158,11,0.15); color: var(--warning-orange); }
+    .badge-no { background: rgba(239,68,68,0.15); color: var(--error-red); }
+    .checklist { list-style: none; }
+    .checklist li {
+      padding: 10px 0; border-bottom: 1px solid var(--border-subtle);
+      display: flex; align-items: flex-start; gap: 10px; font-size: 14px;
+    }
+    .checklist li::before { content: '☐'; color: var(--blue-primary); font-size: 16px; flex-shrink: 0; }
+    .portal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .portal-card h3 { font-size: 15px; margin-bottom: 8px; color: var(--purple); }
+    .portal-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+    .portal-card a {
+      color: var(--blue-primary); font-size: 13px; text-decoration: none; font-weight: 600;
+    }
+    .portal-card a:hover { text-decoration: underline; }
+    .role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+    .role-card {
+      padding: 16px; border-radius: 10px; border: 1px solid var(--border-subtle);
+      background: rgba(255,255,255,0.02);
+    }
+    .role-card strong { display: block; margin-bottom: 6px; font-size: 14px; }
+    .role-card span { font-size: 12px; color: var(--text-muted); }
+    .ar-block { direction: rtl; text-align: right; font-size: 14px; color: var(--text-muted); margin-top: 8px; }
+    .hidden { display: none; }
+    .print-btn {
+      position: fixed; bottom: 24px; right: 24px; z-index: 200;
+      background: var(--blue-primary); color: white; border: none; padding: 12px 20px;
+      border-radius: 10px; cursor: pointer; font-family: inherit; font-weight: 600; font-size: 14px;
+      box-shadow: 0 4px 20px rgba(43,47,255,0.4);
+    }
+    .print-btn:hover { filter: brightness(1.1); }
+    @media print {
+      .sidebar, .print-btn, .lang-tabs { display: none !important; }
+      .main-content { margin-left: 0; padding: 20px; }
+      body { background: white; color: black; }
+      .card { border: 1px solid #ccc; }
+    }
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span, .nav-section { display: none; }
+      .main-content { margin-left: 80px; padding: 20px; }
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/glass-nav.css" />
+  <script src="/assets/glass-nav.js" defer></script>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width:110px;height:110px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width:96px;height:96px;object-fit:contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><span>Dashboard</span></a>
+  <a href="/page/pipeline.html" class="nav-item"><span>Pipeline</span></a>
+  <div class="nav-section">GUIDE</div>
+  <a href="/page/workflow.html" class="nav-item active"><span>Workflow Guide</span></a>
+  <a href="/page/client-portal.html" class="nav-item"><span>Client Portal</span></a>
+  <a href="/page/freelancer-portal.html" class="nav-item"><span>Freelancer Portal</span></a>
+  <div class="nav-section">SYSTEM</div>
+  <a href="/profile.html" class="nav-item"><span>My Profile</span></a>
+  <a href="/settings.html" class="nav-item"><span>Settings</span></a>
+</div>
+
+<div class="main-content">
+  <div class="page-header">
+    <h1>Workflow Guide</h1>
+    <p class="subtitle">Guide complet de sير العمل — Comment suivre le travail, les clients et les freelancers</p>
+  </div>
+
+  <div class="lang-tabs">
+    <button class="lang-tab active" data-lang="fr" onclick="setLang('fr')">Français</button>
+    <button class="lang-tab" data-lang="ar" onclick="setLang('ar')">العربية</button>
+    <button class="lang-tab" data-lang="both" onclick="setLang('both')">FR + AR</button>
+  </div>
+
+  <!-- SECTION 1 -->
+  <div class="section" id="sec-overview">
+    <div class="section-title"><span class="num">1</span> <span class="t-fr">Vue d'ensemble</span><span class="t-ar hidden">نظرة عامة</span></div>
+    <div class="card t-fr">
+      <p>Niche CRM connecte l'acquisition commerciale à la livraison opérationnelle. Chaque étape est traçable dans une page dédiée.</p>
+    </div>
+    <div class="card t-ar hidden ar-block">
+      <p>منصة Niche CRM تربط بين جلب العملاء (Leads) وتسليم المشاريع. كل مرحلة لها صفحة خاصة يمكن التحقق منها.</p>
+    </div>
+    <div class="flow-diagram">
+      <span class="flow-step">Lead</span><span class="flow-arrow">→</span>
+      <span class="flow-step">Pipeline</span><span class="flow-arrow">→</span>
+      <span class="flow-step">Client</span><span class="flow-arrow">→</span>
+      <span class="flow-step">Projet</span><span class="flow-arrow">→</span>
+      <span class="flow-step">Tâches</span><span class="flow-arrow">→</span>
+      <span class="flow-step">Livraison</span><span class="flow-arrow">→</span>
+      <span class="flow-step">Facturation</span>
+    </div>
+  </div>
+
+  <!-- SECTION 2 ROLES -->
+  <div class="section">
+    <div class="section-title"><span class="num">2</span> <span class="t-fr">Rôles & accès</span><span class="t-ar hidden">الأدوار والصلاحيات</span></div>
+    <div class="role-grid">
+      <div class="role-card"><strong>Admin</strong><span class="t-fr">Accès total — supervision, validation, rapports</span><span class="t-ar hidden ar-block">وصول كامل — إشراف وتقارير</span></div>
+      <div class="role-card"><strong>Client</strong><span class="t-fr">Client Portal — projets, factures, équipe</span><span class="t-ar hidden ar-block">بوابة العميل — مشاريع وفواتير</span></div>
+      <div class="role-card"><strong>Freelancer</strong><span class="t-fr">Tâches assignées + Screen Monitor</span><span class="t-ar hidden ar-block">مهام + مراقبة الشاشة</span></div>
+      <div class="role-card"><strong>Cold Caller</strong><span class="t-fr">Pipeline, appels, leads</span><span class="t-ar hidden ar-block">Pipeline والمكالمات</span></div>
+      <div class="role-card"><strong>Outreacher</strong><span class="t-fr">Prospection messages / email</span><span class="t-ar hidden ar-block">التواصل والرسائل</span></div>
+    </div>
+    <div class="card" style="margin-top:16px;border-color:rgba(245,158,11,0.3);">
+      <span class="badge badge-warn">Phase 2</span>
+      <span class="t-fr" style="font-size:13px;margin-left:8px;">Filtrage par rôle pas encore actif — tous les utilisateurs voient le menu admin.</span>
+      <span class="t-ar hidden ar-block" style="font-size:13px;">فلترة الصلاحيات حسب الدور — قيد التطوير</span>
+    </div>
+  </div>
+
+  <!-- SECTION 3 WORKFLOW STEPS -->
+  <div class="section">
+    <div class="section-title"><span class="num">3</span> <span class="t-fr">Étapes du workflow</span><span class="t-ar hidden">مراحل سير العمل</span></div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th class="t-fr">Étape</th><th class="t-ar hidden">المرحلة</th>
+            <th>Page</th>
+            <th>API</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="t-fr">1. Créer un Lead</span><span class="t-ar hidden">إنشاء Lead</span></td>
+            <td><a href="/page/pipeline.html" style="color:var(--blue-primary)">pipeline.html</a></td>
+            <td><code>POST /api/pipeline/deals</code></td>
+            <td><span class="badge badge-ok">OK</span></td>
+          </tr>
+          <tr>
+            <td><span class="t-fr">2. Gagner le deal → Client</span><span class="t-ar hidden">تحويل إلى عميل</span></td>
+            <td><a href="/page/clients.html" style="color:var(--blue-primary)">clients.html</a></td>
+            <td><code>POST /api/clients</code></td>
+            <td><span class="badge badge-ok">OK</span></td>
+          </tr>
+          <tr>
+            <td><span class="t-fr">3. Créer un Projet</span><span class="t-ar hidden">إنشاء مشروع</span></td>
+            <td><a href="/page/projects.html" style="color:var(--blue-primary)">projects.html</a></td>
+            <td><code>POST /api/projects</code></td>
+            <td><span class="badge badge-ok">OK</span></td>
+          </tr>
+          <tr>
+            <td><span class="t-fr">4. Assigner des Tâches</span><span class="t-ar hidden">تعيين مهام</span></td>
+            <td><a href="/page/tasks.html" style="color:var(--blue-primary)">tasks.html</a></td>
+            <td><code>POST /api/tasks</code></td>
+            <td><span class="badge badge-ok">OK</span></td>
+          </tr>
+          <tr>
+            <td><span class="t-fr">5. Suivi Client</span><span class="t-ar hidden">متابعة العميل</span></td>
+            <td><a href="/page/client-portal.html" style="color:var(--blue-primary)">client-portal.html</a></td>
+            <td><code>GET /api/clients/:id/*</code></td>
+            <td><span class="badge badge-warn">Partiel</span></td>
+          </tr>
+          <tr>
+            <td><span class="t-fr">6. Facturation</span><span class="t-ar hidden">الفوترة</span></td>
+            <td><a href="/page/finance.html" style="color:var(--blue-primary)">finance.html</a></td>
+            <td><code>GET /api/finance/*</code></td>
+            <td><span class="badge badge-ok">OK</span></td>
+          </tr>
+          <tr>
+            <td><span class="t-fr">7. Rapports</span><span class="t-ar hidden">التقارير</span></td>
+            <td><a href="/page/reports.html" style="color:var(--blue-primary)">reports.html</a></td>
+            <td>Multi-API</td>
+            <td><span class="badge badge-ok">OK</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTION 4 PORTALS -->
+  <div class="section">
+    <div class="section-title"><span class="num">4</span> <span class="t-fr">Portails</span><span class="t-ar hidden">البوابات</span></div>
+    <div class="portal-grid">
+      <div class="card portal-card">
+        <h3>Client Portal <span class="badge badge-warn">Partiel</span></h3>
+        <p class="t-fr">Le client voit ses projets (% progression), factures et équipe.</p>
+        <p class="t-ar hidden ar-block">العميل يرى مشاريعه ونسبة التقدم والفواتير والفريق.</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">URL: <code>/page/client-portal.html?id=CLIENT_ID</code></p>
+        <a href="/page/client-portal.html">Ouvrir →</a>
+      </div>
+      <div class="card portal-card">
+        <h3>Freelancer Portal <span class="badge badge-ok">OK</span></h3>
+        <p class="t-fr">Tâches assignées, mises à jour, livrables, time tracking.</p>
+        <p class="t-ar hidden ar-block">بوابة المستقل — المهام، التحديثات، التسليمات، تتبع الوقت.</p>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">URL: <code>/page/freelancer-portal.html</code></p>
+        <a href="/page/freelancer-portal.html">Ouvrir →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5 PROGRESS -->
+  <div class="section">
+    <div class="section-title"><span class="num">5</span> <span class="t-fr">Comment suivre le progrès ?</span><span class="t-ar hidden">كيف تتابع التقدم؟</span></div>
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th class="t-fr">Qui</th><th class="t-ar hidden">من</th>
+            <th class="t-fr">Où vérifier</th><th class="t-ar hidden">أين</th>
+            <th class="t-fr">Indicateur</th><th class="t-ar hidden">المؤشر</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Admin</td>
+            <td>Dashboard, Pipeline, Tasks, Reports</td>
+            <td><span class="t-fr">KPIs, stages, % projet, stats équipe</span><span class="t-ar hidden">إحصائيات ومراحل ونسبة المشروع</span></td>
+          </tr>
+          <tr>
+            <td>Client</td>
+            <td>Client Portal</td>
+            <td><span class="t-fr">Progression projet, factures, équipe</span><span class="t-ar hidden">تقدم المشروع والفواتير</span></td>
+          </tr>
+          <tr>
+            <td>Freelancer</td>
+            <td>Tasks, Screen Monitor</td>
+            <td><span class="t-fr">Tâches assignées, sessions écran</span><span class="t-ar hidden">المهام ومراقبة الشاشة</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTION 6 DOCUMENTS -->
+  <div class="section">
+    <div class="section-title"><span class="num">6</span> <span class="t-fr">Documents & vérification</span><span class="t-ar hidden">المستندات والتحقق</span></div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Fonction</th><th>Statut</th><th>Détail</th></tr></thead>
+        <tbody>
+          <tr><td><span class="t-fr">Flag visible_to_client</span></td><td><span class="badge badge-ok">OK</span></td><td>En base sur les tâches</td></tr>
+          <tr><td><span class="t-fr">Upload fichiers</span></td><td><span class="badge badge-no">Manquant</span></td><td>UI locale seulement</td></tr>
+          <tr><td><span class="t-fr">Validation client</span></td><td><span class="badge badge-no">Manquant</span></td><td>Phase 2</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTION 7 STATUS MATRIX -->
+  <div class="section">
+    <div class="section-title"><span class="num">7</span> <span class="t-fr">État des modules</span><span class="t-ar hidden">حالة الوحدات</span></div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Module</th><th>Statut</th></tr></thead>
+        <tbody>
+          <tr><td>Dashboard & Analytics</td><td><span class="badge badge-ok">Fonctionnel</span></td></tr>
+          <tr><td>Pipeline / Kanban / Gantt</td><td><span class="badge badge-ok">Fonctionnel</span></td></tr>
+          <tr><td>Clients / Projects / Tasks</td><td><span class="badge badge-ok">Fonctionnel</span></td></tr>
+          <tr><td>Finance & Reports</td><td><span class="badge badge-ok">Fonctionnel</span></td></tr>
+          <tr><td>Client Portal</td><td><span class="badge badge-warn">Partiel</span></td></tr>
+          <tr><td>Freelancer Portal</td><td><span class="badge badge-ok">Fonctionnel</span></td></tr>
+          <tr><td>Freelancers page</td><td><span class="badge badge-ok">Fonctionnel</span></td></tr>
+          <tr><td>Carte géographique</td><td><span class="badge badge-warn">Partiel</span></td></tr>
+          <tr><td>Messages / Schedule</td><td><span class="badge badge-no">Stub</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SECTION 8 CHECKLIST -->
+  <div class="section">
+    <div class="section-title"><span class="num">8</span> <span class="t-fr">Checklist de vérification (Client)</span><span class="t-ar hidden">قائمة التحقق للعميل</span></div>
+    <div class="card">
+      <ul class="checklist">
+        <li><span class="t-fr">Créer un lead dans Pipeline et le déplacer jusqu'à Won</span><span class="t-ar hidden">إنشاء Lead وتحريكه حتى Won</span></li>
+        <li><span class="t-fr">Créer un client dans Clients</span><span class="t-ar hidden">إنشاء عميل في Clients</span></li>
+        <li><span class="t-fr">Créer un projet avec budget et dates</span><span class="t-ar hidden">إنشاء مشروع بميزانية وتواريخ</span></li>
+        <li><span class="t-fr">Ajouter des tâches avec « Visible to client »</span><span class="t-ar hidden">إضافة مهام مرئية للعميل</span></li>
+        <li><span class="t-fr">Ouvrir Client Portal avec ?id= du client</span><span class="t-ar hidden">فتح بوابة العميل بـ ?id=</span></li>
+        <li><span class="t-fr">Vérifier factures dans Finance</span><span class="t-ar hidden">التحقق من الفواتير في Finance</span></li>
+        <li><span class="t-fr">Consulter Reports pour la vue globale</span><span class="t-ar hidden">مراجعة Reports للنظرة الشاملة</span></li>
+        <li><span class="t-fr">Tester Screen Monitor pour un freelancer</span><span class="t-ar hidden">اختبار Screen Monitor للمستقل</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SECTION 9 ROADMAP -->
+  <div class="section">
+    <div class="section-title"><span class="num">9</span> <span class="t-fr">Prochaines étapes</span><span class="t-ar hidden">الخطوات القادمة</span></div>
+    <div class="card">
+      <ol style="padding-left:20px;font-size:14px;color:var(--text-muted);">
+        <li class="t-fr" style="margin-bottom:8px;">Freelancer Portal dédié</li>
+        <li class="t-fr" style="margin-bottom:8px;">Sécurité par rôle (chaque utilisateur voit son espace)</li>
+        <li class="t-fr" style="margin-bottom:8px;">Liaison login client → ses projets automatiquement</li>
+        <li class="t-fr" style="margin-bottom:8px;">Upload & validation de documents</li>
+        <li class="t-fr" style="margin-bottom:8px;">Géocodage pour la carte Dashboard</li>
+        <li class="t-fr">Notifications temps réel</li>
+      </ol>
+      <ol class="t-ar hidden ar-block" style="padding-right:20px;list-style:decimal;">
+        <li style="margin-bottom:8px;">بوابة المستقل</li>
+        <li style="margin-bottom:8px;">الأمان حسب الدور</li>
+        <li style="margin-bottom:8px;">ربط حساب العميل بمشاريعه</li>
+        <li style="margin-bottom:8px;">رفع والتحقق من المستندات</li>
+        <li style="margin-bottom:8px;">إصلاح الخريطة</li>
+        <li>إشعارات فورية</li>
+      </ol>
+    </div>
+  </div>
+
+  <p style="font-size:12px;color:var(--text-muted);text-align:center;margin-top:40px;">
+    Niche CRM Workflow Guide v1.0 — Juin 2026 — <a href="/docs/WORKFLOW.md" style="color:var(--blue-primary)">Version Markdown</a>
+  </p>
+</div>
+
+<button class="print-btn" onclick="window.print()">Imprimer / طباعة</button>
+
+<script>
+  if (!localStorage.getItem('niche_token')) {
+    // Allow viewing workflow without login for client demos
+    // window.location.href = '/login.html';
+  }
+
+  function setLang(lang) {
+    document.querySelectorAll('.lang-tab').forEach(t => t.classList.toggle('active', t.dataset.lang === lang));
+    const showFr = lang === 'fr' || lang === 'both';
+    const showAr = lang === 'ar' || lang === 'both';
+    document.querySelectorAll('.t-fr').forEach(el => el.classList.toggle('hidden', !showFr));
+    document.querySelectorAll('.t-ar').forEach(el => el.classList.toggle('hidden', !showAr));
+  }
+</script>
+</body>
+</html>

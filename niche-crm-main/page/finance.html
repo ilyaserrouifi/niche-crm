@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Finance Control</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --cyan: #06b6d4;
+      --purple: #818cf8;
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: rgba(13, 16, 23, 0.98);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: white; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+    .nav-section {
+      color: #374151;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 20px 20px 8px 20px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      margin: 2px 12px;
+      border-radius: 10px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item i { width: 20px; font-size: 16px; font-style: normal; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+
+    .logout-wrapper {
+      margin-top: auto;
+      padding: 20px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .logout-btn {
+      width: 100%;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 12px;
+      color: #ef4444;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Main content */
+    .main-content {
+      margin-left: 260px;
+      padding: 24px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .page-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .btn-add {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 30px;
+      padding: 8px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
+
+    /* Stats Row - MRR Dashboard */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 20px;
+      transition: var(--transition);
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+    .stat-change { font-size: 11px; margin-top: 6px; }
+    .positive { color: var(--success-green); }
+    .negative { color: var(--error-red); }
+    .color-purple { color: #818cf8; }
+    .color-green { color: #34d399; }
+    .color-gold { color: #fbbf24; }
+    .color-emerald { color: #10b981; }
+
+    /* Two columns layout */
+    .two-columns {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .card:hover { border-color: rgba(43,47,255,0.2); }
+    .card-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-header h3 {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #9ca3af;
+    }
+    .card-body { padding: 20px 24px; }
+
+    /* Revenue/Expense rows */
+    .finance-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .finance-row:last-child { border-bottom: none; }
+    .finance-label { font-size: 13px; color: #d1d5db; }
+    .finance-value { font-size: 15px; font-weight: 600; }
+    .finance-value.positive { color: var(--success-green); }
+    .finance-value.negative { color: var(--error-red); }
+
+    /* P&L Statement */
+    .pl-statement {
+      background: rgba(0,0,0,0.2);
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .pl-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+    }
+    .pl-label { font-size: 13px; color: #9ca3af; }
+    .pl-value { font-size: 16px; font-weight: 700; }
+    .pl-total { border-top: 2px solid var(--border-subtle); margin-top: 8px; padding-top: 12px; }
+    .pl-total .pl-label { font-weight: 700; color: white; }
+    .pl-total .pl-value { font-size: 20px; }
+
+    /* Loading spinner */
+    .loading-spinner { text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(43,47,255,0.2); border-top-color: #2b2fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast notification */
+    .toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 1100; animation: slideIn 0.3s ease; }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Tables */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 10px 8px;
+      color: #4b5563;
+      font-size: 10px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .data-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 12px;
+      color: #d1d5db;
+    }
+    .status-paid { color: #10b981; font-weight: 600; }
+    .status-pending { color: #f59e0b; font-weight: 600; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: #6b7280;
+    }
+
+    @media (max-width: 1000px) {
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .two-columns { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/glass-nav.css" />
+  <script src="/assets/glass-nav.js" defer></script>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Pipeline</span></a>
+  <div class="nav-section">PEOPLE</div>
+  <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
+  <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
+  <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
+  <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  <div class="nav-section">WORK</div>
+  <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
+  <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
+  <a href="/page/finance.html" class="nav-item active"><i>💰</i> <span>Finance</span></a>
+  <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title">
+      <h1>Finance Control</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div>
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addIncomeBtn">+ Add Income</button>
+    </div>
+  </div>
+
+  <!-- MRR Dashboard -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value color-purple" id="newMRR">$0</div><div class="stat-label">NEW MRR</div><div class="stat-change positive" id="newMRRChange">+0%</div></div>
+    <div class="stat-card"><div class="stat-value color-green" id="churnedMRR">$0</div><div class="stat-label">CHURNED MRR</div><div class="stat-change negative" id="churnedMRRChange">-0%</div></div>
+    <div class="stat-card"><div class="stat-value color-gold" id="expansionMRR">$0</div><div class="stat-label">EXPANSION MRR</div><div class="stat-change positive" id="expansionMRRChange">+0%</div></div>
+    <div class="stat-card"><div class="stat-value color-emerald" id="netMRR">$0</div><div class="stat-label">NET MRR</div><div class="stat-change positive" id="netMRRChange">+0% MoM</div></div>
+  </div>
+
+  <div class="two-columns">
+    <!-- Revenue Tracking / Income -->
+    <div class="card">
+      <div class="card-header"><h3>💰 REVENUE TRACKING</h3><span class="card-link" style="color:#818cf8;font-size:12px;cursor:pointer" onclick="openAddIncomeModal()">+ Add Income</span></div>
+      <div class="card-body">
+        <div id="incomeList" class="loading-spinner"><div class="spinner"></div>Loading...</div>
+      </div>
+    </div>
+
+    <!-- Expense Tracking -->
+    <div class="card">
+      <div class="card-header"><h3>📉 EXPENSE TRACKING</h3><span class="card-link" style="color:#818cf8;font-size:12px;cursor:pointer" onclick="openAddExpenseModal()">+ Add Expense</span></div>
+      <div class="card-body">
+        <div id="expenseList" class="loading-spinner"><div class="spinner"></div>Loading...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-columns">
+    <!-- Team Costs + Tools -->
+    <div class="card">
+      <div class="card-header"><h3>👥 TEAM COSTS</h3></div>
+      <div class="card-body">
+        <div class="finance-row"><span class="finance-label">Cold Callers</span><span class="finance-value" id="callersCost">$0</span></div>
+        <div class="finance-row"><span class="finance-label">Outreachers</span><span class="finance-value" id="outreachersCost">$0</span></div>
+        <div class="finance-row"><span class="finance-label">Freelancers</span><span class="finance-value" id="freelancersCost">$0</span></div>
+        <div class="finance-row"><span class="finance-label" style="font-weight:700">Total Team Cost</span><span class="finance-value positive" id="totalTeamCost">$0</span></div>
+      </div>
+    </div>
+
+    <!-- Tools & Integrations -->
+    <div class="card">
+      <div class="card-header"><h3>🛠️ TOOLS & INTEGRATIONS</h3><span class="card-link" style="color:#818cf8;font-size:12px;cursor:pointer" onclick="openAddToolModal()">+ Add Tool</span></div>
+      <div class="card-body">
+        <div id="toolsList"></div>
+        <div class="finance-row" style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px">
+          <span class="finance-label" style="font-weight:700">Total Tools Cost</span>
+          <span class="finance-value positive" id="totalToolsCost">$0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Investment Tracker -->
+  <div class="card" style="margin-bottom:24px">
+    <div class="card-header"><h3>📈 INVESTMENT TRACKER</h3><span class="card-link" style="color:#818cf8;font-size:12px;cursor:pointer" onclick="openAddInvestmentModal()">+ Add Investment</span></div>
+    <div class="card-body">
+      <div id="investmentsList"></div>
+    </div>
+  </div>
+
+  <!-- P&L STATEMENT -->
+  <div class="card">
+    <div class="card-header"><h3>📊 P&L STATEMENT</h3></div>
+    <div class="card-body">
+      <div class="pl-statement" id="plStatement">
+        <div class="loading-spinner"><div class="spinner"></div>Calculating...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Add Income -->
+<div id="incomeModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3>Add Income</h3><button class="modal-close" onclick="closeIncomeModal()">✕</button></div>
+    <div class="field-group"><label class="field-label">CLIENT</label><input class="field-input" id="incomeClient" placeholder="Client name"></div>
+    <div class="field-group"><label class="field-label">AMOUNT ($)</label><input class="field-input" type="number" id="incomeAmount" placeholder="0"></div>
+    <div class="field-group"><label class="field-label">DATE</label><input class="field-input" type="date" id="incomeDate"></div>
+    <div class="field-group"><label class="field-label">SERVICE</label><input class="field-input" id="incomeService" placeholder="Service type"></div>
+    <div class="field-group"><label class="field-label">RECURRING</label><select class="field-select" id="incomeRecurring"><option value="One-time">One-time</option><option value="Monthly">Monthly</option><option value="Yearly">Yearly</option></select></div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="closeIncomeModal()">Cancel</button><button class="btn-save" id="saveIncomeBtn">Add</button></div>
+  </div>
+</div>
+
+<!-- Modal Add Expense -->
+<div id="expenseModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3>Add Expense</h3><button class="modal-close" onclick="closeExpenseModal()">✕</button></div>
+    <div class="field-group"><label class="field-label">CATEGORY</label><select class="field-select" id="expenseCategory"><option>Team</option><option>Tools</option><option>Marketing</option><option>Office</option><option>Other</option></select></div>
+    <div class="field-group"><label class="field-label">AMOUNT ($)</label><input class="field-input" type="number" id="expenseAmount" placeholder="0"></div>
+    <div class="field-group"><label class="field-label">VENDOR</label><input class="field-input" id="expenseVendor" placeholder="Vendor name"></div>
+    <div class="field-group"><label class="field-label">DATE</label><input class="field-input" type="date" id="expenseDate"></div>
+    <div class="field-group"><label class="field-label">RECURRING</label><select class="field-select" id="expenseRecurring"><option value="No">No</option><option value="Yes">Yes</option></select></div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="closeExpenseModal()">Cancel</button><button class="btn-save" id="saveExpenseBtn">Add</button></div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // FINANCE CONTROL - COMPLETE WITH REAL API
+  // ============================================================
+  
+  // Check authentication
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+
+  let incomes = [];
+  let expenses = [];
+  let investments = [];
+  let tools = [
+    { id: '1', name: 'Apollo', cost: 0 },
+    { id: '2', name: 'Instantly', cost: 0 },
+    { id: '3', name: 'Expandi', cost: 0 }
+  ];
+
+  const API_BASE = '/api';
+
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  async function fetchIncomesFromAPI() {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/finance/invoices`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        incomes = await response.json();
+        saveIncomesToLocal();
+      } else {
+        loadIncomesFromLocal();
+      }
+    } catch (error) {
+      loadIncomesFromLocal();
+    }
+  }
+
+  async function fetchExpensesFromAPI() {
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch(`${API_BASE}/finance/expenses`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        expenses = await response.json();
+        saveExpensesToLocal();
+      } else {
+        loadExpensesFromLocal();
+      }
+    } catch (error) {
+      loadExpensesFromLocal();
+    }
+  }
+
+  function loadIncomesFromLocal() { const stored = localStorage.getItem('finance_incomes'); incomes = stored ? JSON.parse(stored) : []; }
+  function loadExpensesFromLocal() { const stored = localStorage.getItem('finance_expenses'); expenses = stored ? JSON.parse(stored) : []; }
+  function loadInvestmentsFromLocal() { const stored = localStorage.getItem('finance_investments'); investments = stored ? JSON.parse(stored) : []; }
+  function loadToolsFromLocal() { const stored = localStorage.getItem('finance_tools'); tools = stored ? JSON.parse(stored) : tools; }
+
+  function saveIncomesToLocal() { localStorage.setItem('finance_incomes', JSON.stringify(incomes)); }
+  function saveExpensesToLocal() { localStorage.setItem('finance_expenses', JSON.stringify(expenses)); }
+  function saveInvestmentsToLocal() { localStorage.setItem('finance_investments', JSON.stringify(investments)); }
+  function saveToolsToLocal() { localStorage.setItem('finance_tools', JSON.stringify(tools)); }
+
+  function addIncomeLocal(income) { 
+    income.id = Date.now().toString(); 
+    incomes.push(income); 
+    saveIncomesToLocal(); 
+    renderAll(); 
+    showToast('Income added!');
+  }
+  
+  function addExpenseLocal(expense) { 
+    expense.id = Date.now().toString(); 
+    expenses.push(expense); 
+    saveExpensesToLocal(); 
+    renderAll(); 
+    showToast('Expense added!');
+  }
+  
+  function addInvestmentLocal(inv) { 
+    inv.id = Date.now().toString(); 
+    investments.push(inv); 
+    saveInvestmentsToLocal(); 
+    renderAll(); 
+    showToast('Investment added!');
+  }
+  
+  function updateToolLocal(id, cost) { 
+    const tool = tools.find(t => t.id === id); 
+    if(tool) { 
+      tool.cost = parseFloat(cost) || 0; 
+      saveToolsToLocal(); 
+      renderAll(); 
+      showToast('Tool updated!');
+    } 
+  }
+
+  function calculateMRR() {
+    const monthlyIncomes = incomes.filter(i => i.recurring === 'Monthly');
+    const newMRR = monthlyIncomes.reduce((s,i) => s + (parseFloat(i.amount)||0), 0);
+    const churnedMRR = 0;
+    const expansionMRR = 0;
+    const netMRR = newMRR - churnedMRR + expansionMRR;
+    document.getElementById('newMRR').innerText = '$' + newMRR.toLocaleString();
+    document.getElementById('churnedMRR').innerText = '$' + churnedMRR.toLocaleString();
+    document.getElementById('expansionMRR').innerText = '$' + expansionMRR.toLocaleString();
+    document.getElementById('netMRR').innerText = '$' + netMRR.toLocaleString();
+  }
+
+  function refreshData() {
+    fetchIncomesFromAPI();
+    fetchExpensesFromAPI();
+    renderAll();
+    showToast('Data refreshed!');
+  }
+
+  function renderAll() {
+    calculateMRR();
+    renderIncomes();
+    renderExpenses();
+    renderTools();
+    renderInvestments();
+    calculatePL();
+  }
+
+  function renderIncomes() {
+    const container = document.getElementById('incomeList');
+    if(incomes.length === 0) { 
+      container.innerHTML = '<div class="empty-state">💰 No income recorded yet.<br>Click "+ Add Income" to get started.</div>'; 
+      return; 
+    }
+    let html = '<table class="data-table"><thead><tr><th>CLIENT</th><th>AMOUNT</th><th>DATE</th><th>SERVICE</th><th>TYPE</th></tr></thead><tbody>';
+    incomes.slice(0, 10).forEach(i => { 
+      html += `<tr>
+        <td>${escapeHtml(i.client) || '-'}</td>
+        <td class="positive">$${(parseFloat(i.amount)||0).toLocaleString()}</td>
+        <td>${i.date || '-'}</td>
+        <td>${escapeHtml(i.service) || '-'}</td>
+        <td>${i.recurring || 'One-time'}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  function renderExpenses() {
+    const container = document.getElementById('expenseList');
+    if(expenses.length === 0) { 
+      container.innerHTML = '<div class="empty-state">📉 No expenses recorded yet.<br>Click "+ Add Expense" to get started.</div>'; 
+      return; 
+    }
+    let html = '<table class="data-table"><thead><tr><th>CATEGORY</th><th>AMOUNT</th><th>VENDOR</th><th>DATE</th><th>RECURRING</th></tr></thead><tbody>';
+    expenses.slice(0, 10).forEach(e => { 
+      html += `<tr>
+        <td>${e.category || '-'}</td>
+        <td class="negative">$${(parseFloat(e.amount)||0).toLocaleString()}</td>
+        <td>${escapeHtml(e.vendor) || '-'}</td>
+        <td>${e.date || '-'}</td>
+        <td>${e.recurring || 'No'}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  function renderTools() {
+    const container = document.getElementById('toolsList');
+    let total = 0;
+    let html = '<table class="data-table"><thead><tr><th>TOOL</th><th>MONTHLY COST</th><th>ACTIONS</th></tr></thead><tbody>';
+    tools.forEach(t => { 
+      total += (t.cost || 0); 
+      html += `<tr>
+        <td>${escapeHtml(t.name)}</td>
+        <td><input type="number" id="tool_${t.id}" value="${t.cost}" style="width:100px;background:#1a1f2e;border:1px solid var(--border-subtle);border-radius:6px;padding:4px;color:white" onchange="updateToolLocal('${t.id}', this.value)"></td>
+        <td>$${(t.cost||0).toLocaleString()}/mo</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    document.getElementById('totalToolsCost').innerText = '$' + total.toLocaleString();
+  }
+
+  function renderInvestments() {
+    const container = document.getElementById('investmentsList');
+    if(investments.length === 0) { 
+      container.innerHTML = '<div class="empty-state">📈 No investments yet.<br>Click "+ Add Investment" to get started.</div>'; 
+      return; 
+    }
+    let html = '<table class="data-table"><thead><tr><th>NAME</th><th>INVESTED</th><th>EXPECTED ROI</th><th>ACTUAL ROI</th><th>TIMELINE</th><th>STATUS</th></tr></thead><tbody>';
+    investments.forEach(i => { 
+      html += `<tr>
+        <td>${escapeHtml(i.name)}</td>
+        <td>$${(parseFloat(i.invested)||0).toLocaleString()}</td>
+        <td>${i.expectedROI || 0}%</td>
+        <td class="${(i.actualROI || 0) > 0 ? 'positive' : ''}">${i.actualROI || 0}%</td>
+        <td>${i.timeline || '-'}</td>
+        <td>${i.status || 'Active'}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+  }
+
+  function calculatePL() {
+    const revenue = incomes.reduce((s,i) => s + (parseFloat(i.amount)||0), 0);
+    const teamCosts = 0;
+    const toolCosts = tools.reduce((s,t) => s + (t.cost||0), 0);
+    const otherExpenses = expenses.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
+    const grossProfit = revenue - teamCosts - toolCosts - otherExpenses;
+    const margin = revenue > 0 ? ((grossProfit / revenue) * 100).toFixed(1) : 0;
+    
+    const plHtml = `
+      <div class="pl-row"><span class="pl-label">Revenue</span><span class="pl-value positive">$${revenue.toLocaleString()}</span></div>
+      <div class="pl-row"><span class="pl-label">- Team Costs</span><span class="pl-value negative">$${teamCosts.toLocaleString()}</span></div>
+      <div class="pl-row"><span class="pl-label">- Tool Costs</span><span class="pl-value negative">$${toolCosts.toLocaleString()}</span></div>
+      <div class="pl-row"><span class="pl-label">- Other Expenses</span><span class="pl-value negative">$${otherExpenses.toLocaleString()}</span></div>
+      <div class="pl-row pl-total"><span class="pl-label">= Gross Profit</span><span class="pl-value positive">$${grossProfit.toLocaleString()}</span></div>
+      <div class="pl-row"><span class="pl-label">Margin</span><span class="pl-value ${margin > 20 ? 'positive' : 'negative'}">${margin}%</span></div>
+    `;
+    document.getElementById('plStatement').innerHTML = plHtml;
+  }
+  
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  // Modal functions
+  function openAddIncomeModal() { document.getElementById('incomeModal').style.display = 'flex'; }
+  function closeIncomeModal() { document.getElementById('incomeModal').style.display = 'none'; }
+  function openAddExpenseModal() { document.getElementById('expenseModal').style.display = 'flex'; }
+  function closeExpenseModal() { document.getElementById('expenseModal').style.display = 'none'; }
+  function openAddToolModal() { 
+    const cost = prompt('Enter monthly cost for new tool:'); 
+    if(cost) { 
+      const newTool = { id: Date.now().toString(), name: 'New Tool', cost: parseFloat(cost) || 0 }; 
+      tools.push(newTool); 
+      saveToolsToLocal(); 
+      renderAll(); 
+      showToast('Tool added!');
+    } 
+  }
+  function openAddInvestmentModal() { 
+    const name = prompt('Investment name:'); 
+    if(name) { 
+      addInvestmentLocal({ 
+        name, 
+        invested: 0, 
+        expectedROI: 0, 
+        actualROI: 0, 
+        timeline: '', 
+        status: 'Active' 
+      }); 
+    } 
+  }
+
+  document.getElementById('saveIncomeBtn')?.addEventListener('click', () => {
+    addIncomeLocal({ 
+      client: document.getElementById('incomeClient')?.value, 
+      amount: parseFloat(document.getElementById('incomeAmount')?.value) || 0, 
+      date: document.getElementById('incomeDate')?.value, 
+      service: document.getElementById('incomeService')?.value, 
+      recurring: document.getElementById('incomeRecurring')?.value 
+    });
+    closeIncomeModal();
+  });
+  
+  document.getElementById('saveExpenseBtn')?.addEventListener('click', () => {
+    addExpenseLocal({ 
+      category: document.getElementById('expenseCategory')?.value, 
+      amount: parseFloat(document.getElementById('expenseAmount')?.value) || 0, 
+      vendor: document.getElementById('expenseVendor')?.value, 
+      date: document.getElementById('expenseDate')?.value, 
+      recurring: document.getElementById('expenseRecurring')?.value 
+    });
+    closeExpenseModal();
+  });
+
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); 
+  }
+
+  document.getElementById('addIncomeBtn').onclick = openAddIncomeModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
+  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+
+  // Initial load
+  updateDate();
+  loadIncomesFromLocal();
+  loadExpensesFromLocal();
+  loadInvestmentsFromLocal();
+  loadToolsFromLocal();
+  renderAll();
+  
+  // Fetch from API in background
+  fetchIncomesFromAPI();
+  fetchExpensesFromAPI();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      fetchIncomesFromAPI();
+      fetchExpensesFromAPI();
+      renderAll();
+    }
+  }, 60000);
+</script>
+
+<style>
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+  .modal-close { background: none; border: none; color: #6b7280; font-size: 20px; cursor: pointer; }
+  .field-group { margin-bottom: 14px; }
+  .field-label { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+  .field-input, .field-select { width: 100%; background: #1a1f2e; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; color: white; font-size: 13px; }
+  .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px; color: #9ca3af; cursor: pointer; }
+  .btn-save { background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; border-radius: 8px; padding: 8px 20px; color: white; font-weight: 600; cursor: pointer; }
+  .card-link { cursor: pointer; }
+  .positive { color: #10b981 !important; }
+  .negative { color: #ef4444 !important; }
+</style>
+</body>
+</html>

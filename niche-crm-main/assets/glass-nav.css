@@ -1,0 +1,52 @@
+/* Glass navigation icons + larger sidebar logo */
+.logo-section .niche-logo-wrap,
+.sidebar-brand .niche-logo-wrap {
+  width: 132px !important;
+  height: 132px !important;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 8px 24px rgba(43, 47, 255, 0.18);
+}
+
+.logo-section img.niche-logo,
+.sidebar-brand img.niche-logo,
+.sidebar-brand img[src*="logo-niche"],
+.logo-section img[src*="logo-niche"] {
+  width: 118px !important;
+  height: 118px !important;
+  object-fit: contain;
+}
+
+.nav-item .glass-nav-icon,
+.logout-btn .glass-nav-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  filter: drop-shadow(0 2px 6px rgba(43, 47, 255, 0.25));
+}
+
+.nav-item .glass-nav-icon svg,
+.logout-btn .glass-nav-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.nav-item:hover .glass-nav-icon,
+.nav-item.active .glass-nav-icon {
+  filter: drop-shadow(0 2px 10px rgba(99, 130, 255, 0.45));
+  transform: scale(1.05);
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.nav-item i:not(.glass-nav-icon) {
+  display: none;
+}

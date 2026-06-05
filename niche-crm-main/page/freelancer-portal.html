@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Niche CRM — Freelancer Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --error-red: #ef4444;
+      --purple: #818cf8;
+      --transition: all 0.2s ease;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+    }
+    .blob { position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0; }
+    .blob-1 { width: 520px; height: 520px; background: rgba(129,140,248,0.12); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43,47,255,0.08); bottom: -80px; right: -80px; }
+
+    .sidebar {
+      position: fixed; left: 0; top: 0; width: 260px; height: 100vh;
+      background: rgba(13,16,23,0.98);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100; display: flex; flex-direction: column;
+    }
+    .sidebar-brand {
+      padding: 20px; display: flex; flex-direction: column; align-items: center; gap: 12px;
+      border-bottom: 1px solid var(--border-subtle); text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; }
+    .portal-badge {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--purple); background: rgba(129,140,248,0.15);
+      padding: 4px 10px; border-radius: 20px; margin-top: 4px;
+    }
+    .nav-section { color: #374151; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; padding: 20px 20px 8px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 10px 16px; margin: 2px 12px;
+      border-radius: 10px; color: #9ca3af; font-size: 13px; text-decoration: none; transition: var(--transition);
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(129,140,248,0.15); color: white; border-left: 3px solid var(--purple); }
+    .logout-wrapper { margin-top: auto; padding: 20px 16px; border-top: 1px solid var(--border-subtle); }
+    .logout-btn {
+      width: 100%; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px; padding: 12px; color: #ef4444; font-size: 13px; cursor: pointer;
+    }
+
+    .main-content { margin-left: 260px; padding: 24px 32px; position: relative; z-index: 1; }
+    .top-header {
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+      margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle);
+    }
+    .page-title h1 {
+      font-size: 28px; font-weight: 700;
+      background: linear-gradient(135deg, #fff, #c4b5fd);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .page-date { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+    .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .btn {
+      border-radius: 8px; padding: 10px 16px; font-size: 13px; cursor: pointer;
+      font-family: inherit; transition: var(--transition); border: none;
+    }
+    .btn-refresh { background: rgba(129,140,248,0.15); border: 1px solid rgba(129,140,248,0.3); color: var(--purple); }
+    .btn-timer-start { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--success-green); }
+    .btn-timer-stop { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: var(--error-red); }
+    .admin-banner {
+      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 13px;
+      display: none; align-items: center; gap: 12px; flex-wrap: wrap;
+    }
+    .admin-banner select {
+      background: #1a1f2e; border: 1px solid var(--border-subtle); color: white;
+      padding: 6px 10px; border-radius: 6px; font-family: inherit;
+    }
+
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--surface-card); border: 1px solid var(--border-subtle);
+      border-radius: 20px; padding: 20px; transition: var(--transition);
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(129,140,248,0.3); }
+    .stat-value { font-size: 28px; font-weight: 700; }
+    .stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+    .c-total { color: var(--purple); }
+    .c-progress { color: #60a5fa; }
+    .c-done { color: var(--success-green); }
+    .c-overdue { color: var(--error-red); }
+
+    .two-columns { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; margin-bottom: 24px; }
+    .card {
+      background: var(--surface-card); border: 1px solid var(--border-subtle);
+      border-radius: 20px; overflow: hidden;
+    }
+    .card-header {
+      padding: 18px 24px; border-bottom: 1px solid var(--border-subtle);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .card-header h3 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #9ca3af; }
+    .card-body { padding: 20px 24px; }
+    .filter-tabs { display: flex; gap: 8px; }
+    .filter-tab {
+      padding: 4px 12px; border-radius: 20px; font-size: 11px; cursor: pointer;
+      border: 1px solid var(--border-subtle); background: transparent; color: var(--text-muted);
+    }
+    .filter-tab.active { background: rgba(129,140,248,0.2); color: white; border-color: var(--purple); }
+
+    .task-card {
+      border: 1px solid var(--border-subtle); border-radius: 14px; padding: 16px;
+      margin-bottom: 12px; background: rgba(255,255,255,0.02); transition: var(--transition);
+    }
+    .task-card:hover { border-color: rgba(129,140,248,0.25); }
+    .task-card.overdue { border-color: rgba(239,68,68,0.35); }
+    .task-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+    .task-name { font-size: 15px; font-weight: 600; }
+    .task-meta { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .priority-high { color: var(--error-red); }
+    .priority-medium { color: var(--warning-orange); }
+    .priority-low { color: var(--success-green); }
+    .status-select {
+      background: #1a1f2e; border: 1px solid var(--border-subtle); color: white;
+      padding: 6px 10px; border-radius: 8px; font-size: 12px; font-family: inherit;
+    }
+    .task-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .btn-sm {
+      padding: 6px 12px; border-radius: 8px; font-size: 11px; cursor: pointer;
+      border: 1px solid var(--border-subtle); background: transparent; color: #9ca3af;
+      font-family: inherit;
+    }
+    .btn-sm:hover { background: rgba(129,140,248,0.15); color: white; }
+    .updates-list, .deliverables-list { margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+    .update-item { padding: 6px 0; border-top: 1px solid rgba(255,255,255,0.05); }
+    .deliverable-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .badge-pending { color: var(--warning-orange); font-size: 10px; font-weight: 600; }
+
+    .project-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .project-item:last-child { border-bottom: none; }
+    .progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #818cf8, #2b2fff); border-radius: 2px; }
+
+    .timer-box {
+      text-align: center; padding: 20px;
+      background: rgba(129,140,248,0.06); border-radius: 12px; margin-bottom: 16px;
+    }
+    .timer-display { font-size: 32px; font-weight: 700; color: var(--purple); font-variant-numeric: tabular-nums; }
+    .time-log { font-size: 12px; color: var(--text-muted); }
+    .time-log-item { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal {
+      background: #111520; border: 1px solid var(--border-subtle); border-radius: 20px;
+      width: 480px; max-width: 90%; padding: 28px;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { font-size: 18px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: #6b7280; font-size: 20px; cursor: pointer; }
+    .field-group { margin-bottom: 14px; }
+    .field-label { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+    .field-input, .field-textarea {
+      width: 100%; background: #1a1f2e; border: 1px solid var(--border-subtle);
+      border-radius: 8px; padding: 10px 12px; color: white; font-size: 13px; font-family: inherit;
+    }
+    .field-textarea { min-height: 90px; resize: vertical; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+    .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px; color: #9ca3af; cursor: pointer; }
+    .btn-save { background: linear-gradient(135deg, #6366f1, #818cf8); border: none; border-radius: 8px; padding: 8px 20px; color: white; font-weight: 600; cursor: pointer; }
+
+    .loading-spinner { text-align: center; padding: 40px; }
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid rgba(129,140,248,0.2);
+      border-top-color: var(--purple); border-radius: 50%;
+      animation: spin 1s linear infinite; margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { text-align: center; padding: 30px; color: #6b7280; font-size: 13px; }
+    .toast {
+      position: fixed; bottom: 30px; right: 30px; background: var(--success-green);
+      color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 1100;
+    }
+    .toast.error { background: var(--error-red); }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span, .nav-section, .portal-badge { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .two-columns { grid-template-columns: 1fr; }
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/glass-nav.css" />
+  <script src="/assets/glass-nav.js" defer></script>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width:110px;height:110px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width:96px;height:96px;object-fit:contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+    <div class="portal-badge">Freelancer Portal</div>
+  </div>
+  <div class="nav-section">MY WORK</div>
+  <a href="#tasks" class="nav-item active"><span>My Tasks</span></a>
+  <a href="#projects" class="nav-item"><span>My Projects</span></a>
+  <a href="#time" class="nav-item"><span>Time Tracking</span></a>
+  <div class="nav-section">TOOLS</div>
+  <a href="/page/screen-monitor.html" class="nav-item"><span>Screen Monitor</span></a>
+  <a href="/page/workflow.html" class="nav-item"><span>Workflow Guide</span></a>
+  <a href="/index.html" class="nav-item"><span>Admin Dashboard</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn">Logout</button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title">
+      <h1 id="welcomeTitle">Freelancer Portal</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-timer-start" id="startTimerBtn">Start Timer</button>
+      <button class="btn btn-timer-stop" id="stopTimerBtn" style="display:none">Stop Timer</button>
+      <button class="btn btn-refresh" id="refreshBtn">Refresh</button>
+    </div>
+  </div>
+
+  <div class="admin-banner" id="adminBanner">
+    <span>Admin view — select freelancer:</span>
+    <select id="freelancerSelect"></select>
+    <button class="btn btn-sm" id="applyFreelancerBtn">Apply</button>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value c-total" id="statTotal">0</div><div class="stat-label">Total Tasks</div></div>
+    <div class="stat-card"><div class="stat-value c-progress" id="statProgress">0</div><div class="stat-label">In Progress</div></div>
+    <div class="stat-card"><div class="stat-value c-done" id="statDone">0</div><div class="stat-label">Completed</div></div>
+    <div class="stat-card"><div class="stat-value c-overdue" id="statOverdue">0</div><div class="stat-label">Overdue</div></div>
+  </div>
+
+  <div class="two-columns">
+    <div class="card" id="tasks">
+      <div class="card-header">
+        <h3>My Tasks</h3>
+        <div class="filter-tabs">
+          <button class="filter-tab active" data-filter="all">All</button>
+          <button class="filter-tab" data-filter="active">Active</button>
+          <button class="filter-tab" data-filter="done">Done</button>
+        </div>
+      </div>
+      <div class="card-body" id="tasksContainer"><div class="loading-spinner"><div class="spinner"></div></div></div>
+    </div>
+
+    <div>
+      <div class="card" id="time" style="margin-bottom:24px">
+        <div class="card-header"><h3>Time Tracking</h3></div>
+        <div class="card-body">
+          <div class="timer-box">
+            <div class="timer-display" id="timerDisplay">00:00:00</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:6px" id="timerStatus">Timer stopped</div>
+          </div>
+          <div id="timeLogs"></div>
+        </div>
+      </div>
+      <div class="card" id="projects">
+        <div class="card-header"><h3>My Projects</h3></div>
+        <div class="card-body" id="projectsContainer"><div class="loading-spinner"><div class="spinner"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Note Modal -->
+<div id="noteModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3>Progress Update</h3><button class="modal-close" onclick="closeModal('noteModal')">✕</button></div>
+    <div class="field-group"><label class="field-label">Update</label><textarea class="field-textarea" id="noteText" placeholder="What did you accomplish?"></textarea></div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="closeModal('noteModal')">Cancel</button><button class="btn-save" id="saveNoteBtn">Save Update</button></div>
+  </div>
+</div>
+
+<!-- Deliverable Modal -->
+<div id="deliverableModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3>Submit Deliverable</h3><button class="modal-close" onclick="closeModal('deliverableModal')">✕</button></div>
+    <div class="field-group"><label class="field-label">Name *</label><input class="field-input" id="deliverableName" placeholder="e.g. Homepage mockup v2"></div>
+    <div class="field-group"><label class="field-label">Link (URL)</label><input class="field-input" id="deliverableUrl" placeholder="https://..."></div>
+    <div class="field-group"><label class="field-label">Notes</label><textarea class="field-textarea" id="deliverableNote" placeholder="Optional notes for the client"></textarea></div>
+    <div class="modal-footer"><button class="btn-cancel" onclick="closeModal('deliverableModal')">Cancel</button><button class="btn-save" id="saveDeliverableBtn">Submit</button></div>
+  </div>
+</div>
+
+<script>
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+
+  const API_BASE = '/api';
+  let tasks = [];
+  let projects = [];
+  let profile = null;
+  let currentFilter = 'all';
+  let activeTaskId = null;
+  let timerInterval = null;
+  let activeTimerStart = null;
+  let viewerRole = 'freelancer';
+
+  const urlParams = new URLSearchParams(window.location.search);
+  let freelancerQuery = urlParams.get('freelancerId') || '';
+
+  function authHeaders() {
+    return { 'Authorization': `Bearer ${localStorage.getItem('niche_token')}`, 'Content-Type': 'application/json' };
+  }
+
+  function apiUrl(path) {
+    const q = freelancerQuery ? `?freelancerId=${freelancerQuery}` : '';
+    return `${API_BASE}${path}${q}`;
+  }
+
+  function showToast(msg, type = 'success') {
+    const t = document.createElement('div');
+    t.className = `toast ${type === 'error' ? 'error' : ''}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+  }
+
+  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+  function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+
+  function isDone(status) {
+    const s = (status || '').toLowerCase();
+    return s.includes('done') || s.includes('complete');
+  }
+
+  function isOverdue(task) {
+    if (!task.deadline || isDone(task.status)) return false;
+    return new Date(task.deadline) < new Date(new Date().toDateString());
+  }
+
+  async function fetchDashboard() {
+    const res = await fetch(apiUrl('/freelancer/dashboard'), { headers: authHeaders() });
+    if (res.status === 403) {
+      showToast('Access denied — freelancer account required', 'error');
+      return null;
+    }
+    if (!res.ok) throw new Error('Dashboard failed');
+    return res.json();
+  }
+
+  async function fetchAll() {
+    try {
+      const [dashRes, tasksRes, projectsRes, timeRes] = await Promise.all([
+        fetch(apiUrl('/freelancer/dashboard'), { headers: authHeaders() }),
+        fetch(apiUrl('/freelancer/tasks'), { headers: authHeaders() }),
+        fetch(apiUrl('/freelancer/projects'), { headers: authHeaders() }),
+        fetch(apiUrl('/freelancer/time-tracking'), { headers: authHeaders() })
+      ]);
+
+      if (dashRes.status === 403) {
+        document.getElementById('tasksContainer').innerHTML = '<div class="empty-state">This portal is for freelancers. Log in with a freelancer account or use admin preview.</div>';
+        return;
+      }
+
+      const dash = dashRes.ok ? await dashRes.json() : null;
+      tasks = tasksRes.ok ? await tasksRes.json() : [];
+      projects = projectsRes.ok ? await projectsRes.json() : [];
+      const timeLogs = timeRes.ok ? await timeRes.json() : [];
+
+      if (dash) {
+        profile = dash.profile;
+        viewerRole = dash.viewerRole;
+        document.getElementById('welcomeTitle').textContent = `Welcome, ${profile.name}`;
+        document.getElementById('statTotal').textContent = dash.stats.total || 0;
+        document.getElementById('statProgress').textContent = dash.stats.in_progress || 0;
+        document.getElementById('statDone').textContent = dash.stats.completed || 0;
+        document.getElementById('statOverdue').textContent = dash.stats.overdue || 0;
+
+        if (dash.activeTimer) {
+          activeTimerStart = new Date(dash.activeTimer.start_time);
+          document.getElementById('startTimerBtn').style.display = 'none';
+          document.getElementById('stopTimerBtn').style.display = 'inline-block';
+          document.getElementById('timerStatus').textContent = 'Timer running';
+          startTimerDisplay();
+        } else {
+          stopTimerDisplay();
+        }
+
+        if (viewerRole === 'admin') {
+          document.getElementById('adminBanner').style.display = 'flex';
+          if (!freelancerQuery) {
+            await loadFreelancerSelect();
+            if (freelancerQuery) return fetchAll();
+          } else {
+            await loadFreelancerSelect();
+          }
+        }
+      }
+
+      renderTasks();
+      renderProjects();
+      renderTimeLogs(timeLogs);
+    } catch (e) {
+      console.error(e);
+      showToast('Failed to load portal data', 'error');
+    }
+  }
+
+  async function loadFreelancerSelect() {
+    const res = await fetch(`${API_BASE}/freelancers`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const list = await res.json();
+    const sel = document.getElementById('freelancerSelect');
+    sel.innerHTML = list.map(f => `<option value="${f.id}" ${String(f.id) === String(freelancerQuery) ? 'selected' : ''}>${escapeHtml(f.name || f.full_name)}</option>`).join('');
+    if (!freelancerQuery && list.length) freelancerQuery = String(list[0].id);
+  }
+
+  function renderTasks() {
+    const container = document.getElementById('tasksContainer');
+    let filtered = tasks;
+    if (currentFilter === 'active') filtered = tasks.filter(t => !isDone(t.status));
+    if (currentFilter === 'done') filtered = tasks.filter(t => isDone(t.status));
+
+    if (!filtered.length) {
+      container.innerHTML = '<div class="empty-state">No tasks assigned yet. Ask your admin to assign tasks to you.</div>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(t => {
+      const overdue = isOverdue(t);
+      const pri = (t.priority || 'medium').toLowerCase();
+      const updates = (t.updates || []).slice(-3).map(u =>
+        `<div class="update-item">${escapeHtml(u.date)} — ${escapeHtml(u.text)}</div>`
+      ).join('');
+      const deliverables = (t.deliverables || []).map(d =>
+        `<div class="deliverable-item"><span>${escapeHtml(d.name)} ${d.url ? `<a href="${escapeHtml(d.url)}" target="_blank" style="color:var(--purple)">link</a>` : ''}</span><span class="badge-pending">${d.status || 'pending'}</span></div>`
+      ).join('');
+
+      return `
+        <div class="task-card ${overdue ? 'overdue' : ''}">
+          <div class="task-top">
+            <div>
+              <div class="task-name">${escapeHtml(t.name)}</div>
+              <div class="task-meta">${escapeHtml(t.projectName || t.client || 'No project')} ${t.deadline ? '· Due ' + escapeHtml(t.deadline) : ''}</div>
+            </div>
+            <select class="status-select" onchange="updateStatus('${t.id}', this.value)">
+              ${['To Do','In Progress','Review','Done'].map(s => `<option value="${s}" ${t.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          ${t.description ? `<div class="task-meta" style="margin-bottom:8px">${escapeHtml(t.description)}</div>` : ''}
+          <div class="task-meta">Priority: <span class="priority-${pri}">${escapeHtml(t.priority || 'Medium')}</span></div>
+          ${updates ? `<div class="updates-list">${updates}</div>` : ''}
+          ${deliverables ? `<div class="deliverables-list">${deliverables}</div>` : ''}
+          <div class="task-actions">
+            <button class="btn-sm" onclick="openNoteModal('${t.id}')">Add Update</button>
+            <button class="btn-sm" onclick="openDeliverableModal('${t.id}')">Submit Deliverable</button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderProjects() {
+    const container = document.getElementById('projectsContainer');
+    if (!projects.length) {
+      container.innerHTML = '<div class="empty-state">No projects yet.</div>';
+      return;
+    }
+    container.innerHTML = projects.map(p => `
+      <div class="project-item">
+        <div style="flex:1">
+          <div style="font-weight:600;font-size:14px">${escapeHtml(p.name)}</div>
+          <div class="task-meta">${escapeHtml(p.client || '')} · ${p.myDone || 0}/${p.myTasks || 0} tasks done</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${p.progress || 0}%"></div></div>
+        </div>
+        <div style="font-size:13px;color:var(--purple);margin-left:12px">${p.progress || 0}%</div>
+      </div>
+    `).join('');
+  }
+
+  function renderTimeLogs(logs) {
+    const container = document.getElementById('timeLogs');
+    if (!logs.length) {
+      container.innerHTML = '<div class="empty-state">No time logged yet.</div>';
+      return;
+    }
+    container.innerHTML = logs.slice(0, 8).map(l => {
+      const start = new Date(l.start_time).toLocaleString();
+      const dur = l.duration_seconds ? `${Math.floor(l.duration_seconds / 60)}m` : 'active';
+      return `<div class="time-log-item"><span>${start}</span><span>${dur}</span></div>`;
+    }).join('');
+  }
+
+  async function updateStatus(taskId, status) {
+    try {
+      const res = await fetch(apiUrl(`/freelancer/tasks/${taskId}/status`), {
+        method: 'PUT', headers: authHeaders(), body: JSON.stringify({ status })
+      });
+      if (!res.ok) throw new Error();
+      showToast('Status updated');
+      fetchAll();
+    } catch { showToast('Failed to update status', 'error'); }
+  }
+
+  function openNoteModal(taskId) {
+    activeTaskId = taskId;
+    document.getElementById('noteText').value = '';
+    openModal('noteModal');
+  }
+
+  function openDeliverableModal(taskId) {
+    activeTaskId = taskId;
+    document.getElementById('deliverableName').value = '';
+    document.getElementById('deliverableUrl').value = '';
+    document.getElementById('deliverableNote').value = '';
+    openModal('deliverableModal');
+  }
+
+  document.getElementById('saveNoteBtn').onclick = async () => {
+    const text = document.getElementById('noteText').value.trim();
+    if (!text) return showToast('Enter an update', 'error');
+    try {
+      const res = await fetch(apiUrl(`/freelancer/tasks/${activeTaskId}/note`), {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({ text })
+      });
+      if (!res.ok) throw new Error();
+      closeModal('noteModal');
+      showToast('Update saved');
+      fetchAll();
+    } catch { showToast('Failed to save update', 'error'); }
+  };
+
+  document.getElementById('saveDeliverableBtn').onclick = async () => {
+    const name = document.getElementById('deliverableName').value.trim();
+    const url = document.getElementById('deliverableUrl').value.trim();
+    const note = document.getElementById('deliverableNote').value.trim();
+    if (!name) return showToast('Name is required', 'error');
+    try {
+      const res = await fetch(apiUrl(`/freelancer/tasks/${activeTaskId}/deliverable`), {
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({ name, url, note })
+      });
+      if (!res.ok) throw new Error();
+      closeModal('deliverableModal');
+      showToast('Deliverable submitted');
+      fetchAll();
+    } catch { showToast('Failed to submit', 'error'); }
+  };
+
+  function startTimerDisplay() {
+    if (timerInterval) clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      if (!activeTimerStart) return;
+      const sec = Math.floor((Date.now() - activeTimerStart.getTime()) / 1000);
+      const h = String(Math.floor(sec / 3600)).padStart(2, '0');
+      const m = String(Math.floor((sec % 3600) / 60)).padStart(2, '0');
+      const s = String(sec % 60).padStart(2, '0');
+      document.getElementById('timerDisplay').textContent = `${h}:${m}:${s}`;
+    }, 1000);
+  }
+
+  function stopTimerDisplay() {
+    if (timerInterval) clearInterval(timerInterval);
+    activeTimerStart = null;
+    document.getElementById('timerDisplay').textContent = '00:00:00';
+    document.getElementById('timerStatus').textContent = 'Timer stopped';
+    document.getElementById('startTimerBtn').style.display = 'inline-block';
+    document.getElementById('stopTimerBtn').style.display = 'none';
+  }
+
+  document.getElementById('startTimerBtn').onclick = async () => {
+    try {
+      const res = await fetch(apiUrl('/freelancer/time-tracking/start'), { method: 'POST', headers: authHeaders() });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      activeTimerStart = new Date(data.session.start_time);
+      document.getElementById('startTimerBtn').style.display = 'none';
+      document.getElementById('stopTimerBtn').style.display = 'inline-block';
+      document.getElementById('timerStatus').textContent = 'Timer running';
+      startTimerDisplay();
+      showToast('Timer started');
+    } catch (e) { showToast(e.message || 'Failed to start timer', 'error'); }
+  };
+
+  document.getElementById('stopTimerBtn').onclick = async () => {
+    try {
+      const res = await fetch(apiUrl('/freelancer/time-tracking/stop'), { method: 'POST', headers: authHeaders() });
+      if (!res.ok) throw new Error();
+      stopTimerDisplay();
+      showToast('Timer stopped');
+      fetchAll();
+    } catch { showToast('Failed to stop timer', 'error'); }
+  };
+
+  document.querySelectorAll('.filter-tab').forEach(btn => {
+    btn.onclick = () => {
+      document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderTasks();
+    };
+  });
+
+  document.getElementById('refreshBtn').onclick = fetchAll;
+  document.getElementById('applyFreelancerBtn').onclick = () => {
+    freelancerQuery = document.getElementById('freelancerSelect').value;
+    const url = new URL(window.location.href);
+    url.searchParams.set('freelancerId', freelancerQuery);
+    window.history.replaceState({}, '', url);
+    fetchAll();
+  };
+  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+
+  document.getElementById('currentDate').textContent = new Date().toLocaleDateString('fr-FR', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+
+  fetchAll();
+  setInterval(fetchAll, 60000);
+</script>
+</body>
+</html>

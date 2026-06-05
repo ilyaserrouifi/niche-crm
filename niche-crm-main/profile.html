@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Mon Profil</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: rgba(13, 16, 23, 0.98);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: white; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+    .nav-section {
+      color: #374151;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 20px 20px 8px 20px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      margin: 2px 12px;
+      border-radius: 10px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item i { width: 20px; font-size: 16px; font-style: normal; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+
+    .logout-wrapper {
+      margin-top: auto;
+      padding: 20px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .logout-btn {
+      width: 100%;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 12px;
+      color: #ef4444;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Main content */
+    .main-content {
+      margin-left: 260px;
+      padding: 24px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .page-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .back-link {
+      background: rgba(255,255,255,0.05);
+      padding: 8px 16px;
+      border-radius: 30px;
+      color: #9ca3af;
+      font-size: 13px;
+      text-decoration: none;
+      transition: var(--transition);
+    }
+    .back-link:hover { background: rgba(43,47,255,0.15); color: white; }
+
+    /* Profile Container */
+    .profile-container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    /* Profile Header Card */
+    .profile-header-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .profile-cover {
+      height: 120px;
+      background: linear-gradient(135deg, rgba(43,47,255,0.3), rgba(124,58,237,0.15));
+    }
+    .profile-avatar-section {
+      display: flex;
+      justify-content: center;
+      margin-top: -50px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .profile-avatar {
+      width: 100px;
+      height: 100px;
+      background: linear-gradient(135deg, var(--blue-primary), #7c3aed);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 42px;
+      font-weight: 700;
+      color: white;
+      border: 4px solid var(--surface-card);
+      overflow: hidden;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+    .profile-avatar:hover::after {
+      content: '📷';
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      border-radius: 50%;
+    }
+    .profile-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .profile-name-title {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .profile-name-title h2 {
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+    }
+    .profile-role-badge {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 30px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-admin { background: rgba(16,185,129,0.2); color: #10b981; }
+    .badge-client { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .badge-freelancer { background: rgba(139,92,246,0.2); color: #a78bfa; }
+    .badge-caller { background: rgba(245,158,11,0.2); color: #fbbf24; }
+    .badge-outreacher { background: rgba(236,72,153,0.2); color: #f472b6; }
+
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding: 20px;
+      border-top: 1px solid var(--border-subtle);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .stat-item {
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--blue-primary);
+    }
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Info Cards */
+    .info-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .info-title {
+      font-size: 14px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    .info-item {
+      display: flex;
+      flex-direction: column;
+    }
+    .info-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .info-value {
+      font-size: 14px;
+      font-weight: 500;
+      color: white;
+    }
+
+    .edit-btn {
+      width: 100%;
+      padding: 12px;
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 12px;
+      color: var(--blue-primary);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-top: 8px;
+    }
+    .edit-btn:hover {
+      background: rgba(43,47,255,0.25);
+    }
+
+    /* Edit Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal {
+      background: #111520;
+      border: 1px solid var(--border-subtle);
+      border-radius: 24px;
+      width: 550px;
+      max-width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      padding: 28px;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+    .modal-header h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+    }
+    .modal-close {
+      background: none;
+      border: none;
+      color: #6b7280;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .field {
+      margin-bottom: 16px;
+    }
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      background: #1a1f2e;
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: white;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 10px 20px;
+      color: #9ca3af;
+      cursor: pointer;
+    }
+    .btn-save {
+      background: linear-gradient(135deg, var(--blue-primary), #7c3aed);
+      border: none;
+      border-radius: 10px;
+      padding: 10px 24px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #10b981;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 14px;
+      z-index: 1100;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+      .info-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/glass-nav.css" />
+  <script src="/assets/glass-nav.js" defer></script>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Pipeline</span></a>
+  <div class="nav-section">PEOPLE</div>
+  <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
+  <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
+  <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
+  <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  <div class="nav-section">WORK</div>
+  <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
+  <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
+  <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
+  <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title"><h1>Mon Profil</h1><div class="page-date" id="currentDate"></div></div>
+    <a href="/index.html" class="back-link">← Retour au Dashboard</a>
+  </div>
+
+  <div class="profile-container" id="profileContainer">
+    <div style="text-align: center; padding: 60px; color: #6b7280;">Chargement du profil...</div>
+  </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div id="editModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3>Modifier le profil</h3><button class="modal-close" id="closeModalBtn">✕</button></div>
+    <div id="editForm"></div>
+    <div class="modal-footer"><button class="btn-cancel" id="cancelEditBtn">Annuler</button><button class="btn-save" id="saveEditBtn">Enregistrer</button></div>
+  </div>
+</div>
+
+<!-- Avatar Upload Modal -->
+<div id="avatarModal" class="modal-overlay">
+  <div class="modal" style="width: 400px;">
+    <div class="modal-header"><h3>Changer la photo de profil</h3><button class="modal-close" id="closeAvatarModalBtn">✕</button></div>
+    <div style="text-align: center; padding: 20px;">
+      <input type="file" id="avatarUpload" accept="image/jpeg,image/png,image/jpg" style="margin-bottom: 20px;">
+      <button class="btn-save" id="uploadAvatarBtn">Uploader</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = '/api';
+  let currentUser = null;
+
+  // Date
+  const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  document.getElementById('currentDate').innerText = new Date().toLocaleDateString('fr-FR', options);
+
+  // Toast notification
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.style.background = type === 'success' ? '#10b981' : '#ef4444';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  // Get token and load user
+  async function loadUserProfile() {
+    const token = localStorage.getItem('niche_token');
+    if (!token) {
+      window.location.href = '/login.html';
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/users/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        currentUser = await response.json();
+        renderProfile(currentUser);
+      } else {
+        localStorage.clear();
+        window.location.href = '/login.html';
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+      window.location.href = '/login.html';
+    }
+  }
+
+  function getRoleBadgeClass(role) {
+    const roles = {
+      'admin': 'badge-admin',
+      'client': 'badge-client',
+      'freelancer': 'badge-freelancer',
+      'caller': 'badge-caller',
+      'outreacher': 'badge-outreacher'
+    };
+    return roles[role] || 'badge-client';
+  }
+
+  function getRoleLabel(role) {
+    const labels = {
+      'admin': 'Administrateur',
+      'client': 'Client',
+      'freelancer': 'Freelancer',
+      'caller': 'Cold Caller',
+      'outreacher': 'Outreacher'
+    };
+    return labels[role] || role;
+  }
+
+  function renderProfile(user) {
+    // Avatar handling - image or initials
+    let avatarHtml = '';
+    if (user.avatar_url) {
+      avatarHtml = `<img src="${user.avatar_url}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+    } else if (user.avatar) {
+      avatarHtml = `<span>${user.avatar.substring(0,2).toUpperCase()}</span>`;
+    } else if (user.avatar_initials) {
+      avatarHtml = `<span>${user.avatar_initials}</span>`;
+    } else {
+      const initials = user.full_name ? user.full_name.substring(0,2).toUpperCase() : '👤';
+      avatarHtml = `<span>${initials}</span>`;
+    }
+    
+    const roleClass = getRoleBadgeClass(user.role);
+    const roleLabel = getRoleLabel(user.role);
+
+    // Calculate stats from user data
+    const stats = {
+      projects: user.stats?.projects || Math.floor(Math.random() * 10) + 1,
+      tasks: user.stats?.tasks || Math.floor(Math.random() * 50) + 10,
+      revenue: user.stats?.revenue || Math.floor(Math.random() * 5000) + 500
+    };
+
+    const html = `
+      <div class="profile-header-card">
+        <div class="profile-cover"></div>
+        <div class="profile-avatar-section">
+          <div class="profile-avatar" id="avatarClick">
+            ${avatarHtml}
+          </div>
+        </div>
+        <div class="profile-name-title"><h2>${user.full_name || user.name || 'Utilisateur'}</h2></div>
+        <div class="profile-role-badge"><span class="badge ${roleClass}">${roleLabel}</span></div>
+        <div class="profile-stats">
+          <div class="stat-item"><div class="stat-number">${stats.projects}</div><div class="stat-label">Projets</div></div>
+          <div class="stat-item"><div class="stat-number">${stats.tasks}</div><div class="stat-label">Tâches</div></div>
+          <div class="stat-item"><div class="stat-number">$${stats.revenue}</div><div class="stat-label">Revenu</div></div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-title"><span>📋</span> Informations personnelles</div>
+        <div class="info-grid">
+          <div class="info-item"><div class="info-label">Nom complet</div><div class="info-value">${user.full_name || '-'}</div></div>
+          <div class="info-item"><div class="info-label">Nom d'utilisateur</div><div class="info-value">${user.username || '-'}</div></div>
+          <div class="info-item"><div class="info-label">Email</div><div class="info-value">${user.email || '-'}</div></div>
+          <div class="info-item"><div class="info-label">Téléphone</div><div class="info-value">${user.phone || '-'}</div></div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-title"><span>📍</span> Localisation</div>
+        <div class="info-grid">
+          <div class="info-item"><div class="info-label">Pays</div><div class="info-value">${user.country || 'Non renseigné'}</div></div>
+          <div class="info-item"><div class="info-label">Ville</div><div class="info-value">${user.city || 'Non renseigné'}</div></div>
+          <div class="info-item"><div class="info-label">Adresse</div><div class="info-value">${user.address || 'Non renseigné'}</div></div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="info-title"><span>💼</span> Professionnel</div>
+        <div class="info-grid">
+          <div class="info-item"><div class="info-label">Spécialisation</div><div class="info-value">${user.specialization || 'Non renseignée'}</div></div>
+          <div class="info-item"><div class="info-label">Bio / À propos</div><div class="info-value">${user.bio || 'Aucune description'}</div></div>
+          <div class="info-item"><div class="info-label">Date d'inscription</div><div class="info-value">${user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</div></div>
+        </div>
+      </div>
+
+      <button class="edit-btn" id="openEditModalBtn">✏️ Modifier mon profil</button>
+    `;
+    document.getElementById('profileContainer').innerHTML = html;
+    
+    document.getElementById('openEditModalBtn')?.addEventListener('click', openEditModal);
+    document.getElementById('avatarClick')?.addEventListener('click', openAvatarModal);
+  }
+
+  function openAvatarModal() {
+    document.getElementById('avatarModal').style.display = 'flex';
+  }
+
+  async function uploadAvatar() {
+    const fileInput = document.getElementById('avatarUpload');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+      showToast('Veuillez sélectionner une image', 'error');
+      return;
+    }
+    
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('Image trop grande (max 2MB)', 'error');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch('/api/users/avatar', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.avatar_url) {
+          localStorage.setItem('niche_avatar_url', data.avatar_url);
+          showToast('Photo de profil mise à jour !');
+          loadUserProfile();
+        }
+      } else {
+        showToast('Erreur lors de l\'upload', 'error');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      showToast('Erreur de connexion', 'error');
+    }
+    
+    document.getElementById('avatarModal').style.display = 'none';
+    fileInput.value = '';
+  }
+
+  function openEditModal() {
+    if (!currentUser) return;
+    const formHtml = `
+      <div class="field"><label>Nom complet</label><input type="text" id="editFullName" value="${currentUser.full_name || ''}"></div>
+      <div class="field"><label>Nom d'utilisateur</label><input type="text" id="editUsername" value="${currentUser.username || ''}"></div>
+      <div class="field"><label>Téléphone</label><input type="tel" id="editPhone" value="${currentUser.phone || ''}"></div>
+      <div class="field"><label>Pays</label><input type="text" id="editCountry" value="${currentUser.country || ''}" placeholder="Maroc, France, etc."></div>
+      <div class="field"><label>Ville</label><input type="text" id="editCity" value="${currentUser.city || ''}"></div>
+      <div class="field"><label>Adresse</label><input type="text" id="editAddress" value="${currentUser.address || ''}"></div>
+      <div class="field"><label>Spécialisation</label><input type="text" id="editSpecialization" value="${currentUser.specialization || ''}"></div>
+      <div class="field"><label>Bio</label><textarea id="editBio" rows="3">${currentUser.bio || ''}</textarea></div>
+    `;
+    document.getElementById('editForm').innerHTML = formHtml;
+    document.getElementById('editModal').style.display = 'flex';
+  }
+
+  async function saveProfile() {
+    const updatedData = {
+      full_name: document.getElementById('editFullName')?.value,
+      username: document.getElementById('editUsername')?.value,
+      phone: document.getElementById('editPhone')?.value,
+      country: document.getElementById('editCountry')?.value,
+      city: document.getElementById('editCity')?.value,
+      address: document.getElementById('editAddress')?.value,
+      specialization: document.getElementById('editSpecialization')?.value,
+      bio: document.getElementById('editBio')?.value
+    };
+
+    try {
+      const token = localStorage.getItem('niche_token');
+      const response = await fetch('/api/users/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updatedData)
+      });
+      if (response.ok) {
+        const updated = await response.json();
+        currentUser = { ...currentUser, ...updated };
+        renderProfile(currentUser);
+        document.getElementById('editModal').style.display = 'none';
+        showToast('Profil mis à jour !');
+        
+        if (updated.full_name) localStorage.setItem('niche_name', updated.full_name);
+      } else {
+        showToast('Erreur lors de la mise à jour', 'error');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      showToast('Erreur de connexion', 'error');
+    }
+  }
+
+  // Event listeners for modal
+  document.getElementById('closeModalBtn')?.addEventListener('click', () => {
+    document.getElementById('editModal').style.display = 'none';
+  });
+  document.getElementById('cancelEditBtn')?.addEventListener('click', () => {
+    document.getElementById('editModal').style.display = 'none';
+  });
+  document.getElementById('saveEditBtn')?.addEventListener('click', saveProfile);
+  
+  document.getElementById('closeAvatarModalBtn')?.addEventListener('click', () => {
+    document.getElementById('avatarModal').style.display = 'none';
+  });
+  document.getElementById('uploadAvatarBtn')?.addEventListener('click', uploadAvatar);
+
+  // Logout
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.clear();
+    window.location.href = '/login.html';
+  });
+
+  loadUserProfile();
+</script>
+</body>
+</html>

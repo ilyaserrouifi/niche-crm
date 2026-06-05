@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Cold Callers</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --transition: all 0.2s ease;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob { position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0; }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed; left: 0; top: 0; width: 260px; height: 100vh;
+      background: rgba(13, 16, 23, 0.98); backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-subtle); z-index: 100;
+      display: flex; flex-direction: column;
+    }
+    .sidebar-brand {
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: white; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+    .nav-section { color: #374151; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; padding: 20px 20px 8px 20px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 10px 16px; margin: 2px 12px;
+      border-radius: 10px; color: #9ca3af; font-size: 13px; font-weight: 500;
+      cursor: pointer; transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item i { width: 20px; font-size: 16px; font-style: normal; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+    .logout-wrapper { margin-top: auto; padding: 20px 16px; border-top: 1px solid var(--border-subtle); }
+    .logout-btn {
+      width: 100%; background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px; padding: 12px; color: #ef4444; font-size: 13px;
+      display: flex; align-items: center; gap: 10px; cursor: pointer; transition: var(--transition);
+      border: none;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Main content */
+    .main-content { margin-left: 260px; padding: 24px 32px; position: relative; z-index: 1; }
+    .top-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle); }
+    .page-title h1 { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #fff, #a5b4fc); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .page-date { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+    .btn-add { background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; border-radius: 8px; padding: 10px 20px; color: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn { background: rgba(43,47,255,0.15); border: 1px solid rgba(43,47,255,0.3); border-radius: 30px; padding: 8px 16px; color: var(--blue-primary); cursor: pointer; font-size: 12px; margin-left: 10px; }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
+
+    /* Stats row */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface-card); backdrop-filter: blur(10px); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 20px; transition: var(--transition); }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+    .color-violet { color: #818cf8; }
+    .color-green { color: #34d399; }
+    .color-gold { color: #fbbf24; }
+    .color-emerald { color: #10b981; }
+
+    /* Callers grid */
+    .callers-grid { display: flex; flex-direction: column; gap: 20px; }
+    .caller-card { background: var(--surface-card); backdrop-filter: blur(10px); border: 1px solid var(--border-subtle); border-radius: 20px; overflow: hidden; transition: var(--transition); }
+    .caller-card:hover { transform: translateX(4px); border-color: rgba(43,47,255,0.3); }
+    .card-header { background: rgba(43,47,255,0.1); padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); }
+    .card-header h3 { font-size: 18px; font-weight: 600; color: white; }
+    .score-badge { padding: 6px 14px; border-radius: 30px; font-size: 14px; font-weight: 700; }
+    .score-A { background: rgba(16,185,129,0.2); color: #10b981; }
+    .score-B { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .score-C { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    .score-D { background: rgba(239,68,68,0.2); color: #ef4444; }
+
+    .card-body { padding: 24px; }
+    .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle); }
+    .info-item .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-item .value { font-size: 14px; font-weight: 500; color: white; margin-top: 4px; }
+    .kpis-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+    .kpi-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; text-align: center; transition: var(--transition); }
+    .kpi-card:hover { background: rgba(255,255,255,0.06); transform: scale(1.02); }
+    .kpi-number { font-size: 22px; font-weight: 700; }
+    .kpi-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+    .kpi-target { font-size: 9px; color: #4b5563; margin-top: 2px; }
+    .payment-row { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 12px 16px; margin: 16px 0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
+    .payment-item { font-size: 13px; }
+    .payment-item strong { color: #fbbf24; }
+    .action-buttons { display: flex; gap: 12px; margin-top: 16px; }
+    .btn-call-log, .btn-add-call, .btn-edit, .btn-delete {
+      flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);
+      border-radius: 8px; color: #9ca3af; font-size: 12px; cursor: pointer; text-align: center; transition: var(--transition);
+    }
+    .btn-call-log:hover, .btn-add-call:hover, .btn-edit:hover { background: rgba(43,47,255,0.15); color: white; }
+    .btn-delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    /* Loading spinner */
+    .loading-spinner { text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(43,47,255,0.2); border-top-color: #2b2fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast notification */
+    .toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 1100; animation: slideIn 0.3s ease; }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+    .modal { background: #111520; border: 1px solid var(--border-subtle); border-radius: 20px; width: 600px; max-width: 90%; max-height: 85vh; overflow-y: auto; padding: 28px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { font-size: 20px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: #6b7280; font-size: 20px; cursor: pointer; }
+    .field-group { margin-bottom: 14px; }
+    .field-label { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+    .field-input, .field-select, .field-textarea { width: 100%; background: #1a1f2e; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; color: white; font-size: 13px; font-family: inherit; }
+    .field-textarea { min-height: 60px; resize: vertical; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+    .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px; color: #9ca3af; cursor: pointer; }
+    .btn-save { background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; border-radius: 8px; padding: 8px 20px; color: white; font-weight: 600; cursor: pointer; }
+
+    /* Call Log Table */
+    .calls-table { width: 100%; border-collapse: collapse; }
+    .calls-table th { text-align: left; padding: 10px 8px; color: #4b5563; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid var(--border-subtle); }
+    .calls-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: #d1d5db; }
+    .empty-state { text-align: center; padding: 40px; color: #6b7280; }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .info-grid { grid-template-columns: repeat(2,1fr); }
+      .kpis-grid { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/glass-nav.css" />
+  <script src="/assets/glass-nav.js" defer></script>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Pipeline</span></a>
+  <div class="nav-section">PEOPLE</div>
+  <a href="/page/cold-callers.html" class="nav-item active"><i>📞</i> <span>Cold Callers</span></a>
+  <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
+  <a href="/page/freelancers.html" class="nav-item"><i>👤</i> <span>Freelancers</span></a>
+  <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  <div class="nav-section">WORK</div>
+  <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
+  <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
+  <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
+  <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title">
+      <h1>Cold Callers</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div>
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addCallerBtn">+ Add Caller</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value color-violet" id="totalCallers">0</div><div class="stat-label">TOTAL CALLERS</div></div>
+    <div class="stat-card"><div class="stat-value color-green" id="activeCallers">0</div><div class="stat-label">ACTIVE</div></div>
+    <div class="stat-card"><div class="stat-value color-gold" id="totalCalls">0</div><div class="stat-label">TOTAL CALLS</div></div>
+    <div class="stat-card"><div class="stat-value color-emerald" id="totalMeetings">0</div><div class="stat-label">MEETINGS BOOKED</div></div>
+  </div>
+
+  <div id="callersContainer" class="callers-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading callers...</div>
+  </div>
+</div>
+
+<!-- Modal Add/Edit Caller -->
+<div id="callerModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modalTitle">Add Cold Caller</h3><button class="modal-close" id="closeModalBtn">✕</button></div>
+    <div id="modalBody"></div>
+    <div id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- Modal Call Log -->
+<div id="callLogModal" class="modal-overlay">
+  <div class="modal" style="width: 900px;">
+    <div class="modal-header"><h3 id="callLogTitle">Call Log</h3><button class="modal-close" id="closeLogModalBtn">✕</button></div>
+    <div id="callLogBody"></div>
+    <div class="modal-footer"><button class="btn-cancel" id="closeLogFooterBtn">Close</button></div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // COLD CALLERS MANAGEMENT - COMPLETE WITH REAL API
+  // ============================================================
+  
+  // Check authentication
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+  
+  let callers = [];
+  let currentCallerId = null;
+  
+  const API_BASE = '/api';
+  
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+  
+  function getCallersFromAPI() {
+    const stored = localStorage.getItem('cold_callers');
+    return stored ? JSON.parse(stored) : [];
+  }
+  
+  function saveCallersToLocal() {
+    localStorage.setItem('cold_callers', JSON.stringify(callers));
+  }
+  
+  function getCallers() { return callers; }
+  function saveCallers() { saveCallersToLocal(); renderAll(); }
+
+  function calculateScore(caller) {
+    const targetCalls = 50;
+    const targetPickup = 30;
+    const targetMeeting = 2;
+    const callScore = Math.min(100, ((caller.todayCalls || 0) / targetCalls) * 100);
+    const pickupScore = Math.min(100, ((caller.pickupRate || 0) / targetPickup) * 100);
+    const meetingScore = Math.min(100, ((caller.meetingRate || 0) / targetMeeting) * 100);
+    const avgScore = (callScore + pickupScore + meetingScore) / 3;
+    if(avgScore >= 90) return 'A';
+    if(avgScore >= 70) return 'B';
+    if(avgScore >= 50) return 'C';
+    return 'D';
+  }
+
+  function updateCallerStats(caller) {
+    const calls = caller.calls || [];
+    const today = new Date().toDateString();
+    const todayCalls = calls.filter(c => new Date(c.timestamp).toDateString() === today);
+    caller.todayCalls = todayCalls.length;
+    caller.totalCalls = calls.length;
+    caller.meetingsBooked = calls.filter(c => c.outcome === 'Meeting Booked').length;
+    caller.pickups = calls.filter(c => c.outcome === 'Pickup' || c.outcome === 'Meeting Booked').length;
+    caller.pickupRate = caller.todayCalls > 0 ? (caller.pickups / caller.todayCalls) * 100 : 0;
+    caller.meetingRate = caller.todayCalls > 0 ? (caller.meetingsBooked / caller.todayCalls) * 100 : 0;
+    caller.noShows = calls.filter(c => c.outcome === 'No-show').length;
+    caller.actualCloses = calls.filter(c => c.outcome === 'Closed').length;
+    caller.score = calculateScore(caller);
+  }
+
+  function addCaller(caller) {
+    caller.id = Date.now().toString();
+    caller.createdAt = new Date().toISOString();
+    caller.calls = [];
+    caller.status = 'active';
+    caller.todayCalls = 0;
+    caller.totalCalls = 0;
+    caller.meetingsBooked = 0;
+    caller.pickups = 0;
+    caller.pickupRate = 0;
+    caller.meetingRate = 0;
+    caller.noShows = 0;
+    caller.actualCloses = 0;
+    caller.score = 'D';
+    callers.push(caller);
+    saveCallers();
+    showToast('Caller added successfully!');
+  }
+
+  function updateCaller(id, data) {
+    const idx = callers.findIndex(c => c.id === id);
+    if(idx !== -1) { 
+      callers[idx] = { ...callers[idx], ...data }; 
+      saveCallers(); 
+      showToast('Caller updated!');
+    }
+  }
+
+  function deleteCaller(id) { 
+    callers = callers.filter(c => c.id !== id); 
+    saveCallers(); 
+    showToast('Caller deleted!');
+  }
+
+  function addCallLog(callerId, callLog) {
+    const caller = callers.find(c => c.id === callerId);
+    if(caller) {
+      callLog.id = Date.now().toString();
+      callLog.timestamp = new Date().toISOString();
+      caller.calls = caller.calls || [];
+      caller.calls.unshift(callLog);
+      updateCallerStats(caller);
+      saveCallers();
+      showToast('Call logged!');
+    }
+  }
+
+  function refreshData() {
+    document.getElementById('callersContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Refreshing...</div>';
+    callers = getCallersFromAPI();
+    renderAll();
+    showToast('Data refreshed!');
+  }
+
+  function renderAll() { updateStats(); renderCallers(); }
+
+  function updateStats() {
+    document.getElementById('totalCallers').innerText = callers.length;
+    document.getElementById('activeCallers').innerText = callers.filter(c => c.status === 'active').length;
+    document.getElementById('totalCalls').innerText = callers.reduce((s,c) => s + (c.totalCalls || 0), 0);
+    document.getElementById('totalMeetings').innerText = callers.reduce((s,c) => s + (c.meetingsBooked || 0), 0);
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  function renderCallers() {
+    const container = document.getElementById('callersContainer');
+    if(callers.length === 0) { 
+      container.innerHTML = '<div class="empty-state">No cold callers yet. Click "+ Add Caller" to get started.</div>'; 
+      return; 
+    }
+    container.innerHTML = callers.map(c => `
+      <div class="caller-card">
+        <div class="card-header"><h3>${escapeHtml(c.name) || 'Unnamed'}</h3><div class="score-badge score-${c.score}">${c.score}</div></div>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-item"><div class="label">USERNAME</div><div class="value">${escapeHtml(c.username) || '-'}</div></div>
+            <div class="info-item"><div class="label">PHONE</div><div class="value">${escapeHtml(c.phone) || '-'}</div></div>
+            <div class="info-item"><div class="label">EMAIL</div><div class="value">${escapeHtml(c.email) || '-'}</div></div>
+            <div class="info-item"><div class="label">NICHE</div><div class="value">${escapeHtml(c.niche) || '-'}</div></div>
+          </div>
+          <div class="info-grid">
+            <div class="info-item"><div class="label">START DATE</div><div class="value">${c.startDate || '-'}</div></div>
+            <div class="info-item"><div class="label">STATUS</div><div class="value">${c.status || 'active'}</div></div>
+            <div class="info-item"><div class="label">BASE SALARY</div><div class="value">$${c.baseSalary || 0}/month</div></div>
+            <div class="info-item"><div class="label">COMMISSION</div><div class="value">$${c.commissionPerMeeting || 0}/meeting</div></div>
+          </div>
+          <div class="kpis-grid">
+            <div class="kpi-card"><div class="kpi-number">${c.todayCalls || 0}</div><div class="kpi-label">Calls Made</div><div class="kpi-target">Target: 50</div></div>
+            <div class="kpi-card"><div class="kpi-number">${(c.pickupRate || 0).toFixed(1)}%</div><div class="kpi-label">Pickups</div><div class="kpi-target">Target: 30%</div></div>
+            <div class="kpi-card"><div class="kpi-number">${c.meetingsBooked || 0}</div><div class="kpi-label">Meetings</div><div class="kpi-target">Target: 2%</div></div>
+            <div class="kpi-card"><div class="kpi-number">${c.noShows || 0}</div><div class="kpi-label">No-shows</div></div>
+            <div class="kpi-card"><div class="kpi-number">${c.actualCloses || 0}</div><div class="kpi-label">Closes</div></div>
+          </div>
+          <div class="payment-row">
+            <div class="payment-item">💰 <strong>Base: $${c.baseSalary || 0}/mo</strong></div>
+            <div class="payment-item">📞 <strong>Commission: $${c.commissionPerMeeting || 0}/meeting</strong></div>
+            <div class="payment-item">🏆 <strong>Bonus: $${c.bonusPerClose || 0}/close</strong></div>
+          </div>
+          <div class="action-buttons">
+            <div class="btn-call-log" onclick="openCallLog('${c.id}')">📞 Call Log (${c.calls?.length || 0})</div>
+            <div class="btn-add-call" onclick="openAddCallModal('${c.id}')">+ Add Call</div>
+          </div>
+          <div class="action-buttons" style="margin-top:8px">
+            <div class="btn-edit" onclick="openEditCaller('${c.id}')">✏️ Edit</div>
+            <div class="btn-delete" onclick="if(confirm('Delete this caller?')) deleteCaller('${c.id}')">🗑️ Delete</div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function openAddCallerModal() { 
+    currentCallerId = null; 
+    document.getElementById('modalTitle').innerText = 'Add Cold Caller'; 
+    document.getElementById('modalBody').innerHTML = getCallerFormHtml({}); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Caller</button></div>`; 
+    document.getElementById('callerModal').style.display = 'flex'; 
+    attachCallerModalEvents(true); 
+  }
+  
+  function openEditCaller(id) { 
+    currentCallerId = id; 
+    const c = callers.find(c => c.id === id); 
+    document.getElementById('modalTitle').innerText = 'Edit Cold Caller'; 
+    document.getElementById('modalBody').innerHTML = getCallerFormHtml(c); 
+    document.getElementById('modalFooter').innerHTML = `<div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; 
+    document.getElementById('callerModal').style.display = 'flex'; 
+    attachCallerModalEvents(false); 
+  }
+
+  function getCallerFormHtml(c) {
+    return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+      <div><div class="field-group"><label class="field-label">FULL NAME</label><input class="field-input" id="callerName" value="${escapeHtml(c.name || '')}"></div>
+      <div class="field-group"><label class="field-label">USERNAME</label><input class="field-input" id="callerUsername" value="${escapeHtml(c.username || '')}"></div>
+      <div class="field-group"><label class="field-label">PHONE</label><input class="field-input" id="callerPhone" value="${escapeHtml(c.phone || '')}"></div>
+      <div class="field-group"><label class="field-label">EMAIL</label><input class="field-input" id="callerEmail" value="${escapeHtml(c.email || '')}"></div>
+      <div class="field-group"><label class="field-label">NICHE</label><input class="field-input" id="callerNiche" value="${escapeHtml(c.niche || '')}"></div></div>
+      <div><div class="field-group"><label class="field-label">START DATE</label><input class="field-input" type="date" id="callerStartDate" value="${c.startDate || ''}"></div>
+      <div class="field-group"><label class="field-label">BASE SALARY ($/month)</label><input class="field-input" type="number" id="callerBaseSalary" value="${c.baseSalary || 0}"></div>
+      <div class="field-group"><label class="field-label">COMMISSION PER MEETING ($)</label><input class="field-input" type="number" id="callerCommission" value="${c.commissionPerMeeting || 0}"></div>
+      <div class="field-group"><label class="field-label">BONUS PER CLOSE ($)</label><input class="field-input" type="number" id="callerBonus" value="${c.bonusPerClose || 0}"></div>
+      <div class="field-group"><label class="field-label">STATUS</label><select class="field-select" id="callerStatus"><option ${c.status==='active'?'selected':''}>active</option><option ${c.status==='inactive'?'selected':''}>inactive</option></select></div></div>
+    </div>`;
+  }
+
+  function attachCallerModalEvents(isAdd) {
+    document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('callerModal').style.display = 'none');
+    document.getElementById('saveModalBtn')?.addEventListener('click', () => {
+      const data = {
+        name: document.getElementById('callerName')?.value,
+        username: document.getElementById('callerUsername')?.value,
+        phone: document.getElementById('callerPhone')?.value,
+        email: document.getElementById('callerEmail')?.value,
+        niche: document.getElementById('callerNiche')?.value,
+        startDate: document.getElementById('callerStartDate')?.value,
+        baseSalary: parseFloat(document.getElementById('callerBaseSalary')?.value) || 0,
+        commissionPerMeeting: parseFloat(document.getElementById('callerCommission')?.value) || 0,
+        bonusPerClose: parseFloat(document.getElementById('callerBonus')?.value) || 0,
+        status: document.getElementById('callerStatus')?.value
+      };
+      if(isAdd) addCaller(data);
+      else updateCaller(currentCallerId, data);
+      document.getElementById('callerModal').style.display = 'none';
+    });
+  }
+
+  function openCallLog(callerId) {
+    const caller = callers.find(c => c.id === callerId);
+    document.getElementById('callLogTitle').innerText = `Call Log — ${caller?.name || 'Caller'}`;
+    const calls = caller?.calls || [];
+    if(calls.length === 0) { 
+      document.getElementById('callLogBody').innerHTML = '<div class="empty-state">No calls recorded yet.</div>'; 
+    } else {
+      let html = '<table class="calls-table"><thead><tr><th>Company</th><th>Time</th><th>Duration</th><th>Outcome</th><th>Pain Notes</th><th>Next Action</th></tr></thead><tbody>';
+      calls.forEach(c => { 
+        html += `<tr>
+          <td>${escapeHtml(c.company) || '-'}</td>
+          <td>${new Date(c.timestamp).toLocaleString()}</td>
+          <td>${c.duration || 0}s</div></td>
+          <td><span class="${c.outcome === 'Meeting Booked' ? 'status-live' : ''}">${c.outcome || '-'}</span></td>
+          <td>${escapeHtml(c.painNotes) || '-'}</td>
+          <td>${escapeHtml(c.nextAction) || '-'}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('callLogBody').innerHTML = html;
+    }
+    document.getElementById('callLogModal').style.display = 'flex';
+  }
+
+  function openAddCallModal(callerId) {
+    currentCallerId = callerId;
+    document.getElementById('modalTitle').innerText = 'Add Call Log';
+    document.getElementById('modalBody').innerHTML = `
+      <div class="field-group"><label class="field-label">COMPANY CALLED</label><input class="field-input" id="callCompany"></div>
+      <div class="field-group"><label class="field-label">DURATION (seconds)</label><input class="field-input" type="number" id="callDuration"></div>
+      <div class="field-group"><label class="field-label">OUTCOME</label><select class="field-select" id="callOutcome"><option>No Answer</option><option>Pickup</option><option>Meeting Booked</option><option>No-show</option><option>Closed</option><option>Follow-up Needed</option></select></div>
+      <div class="field-group"><label class="field-label">PAIN NOTES</label><textarea class="field-textarea" id="callPainNotes"></textarea></div>
+      <div class="field-group"><label class="field-label">NEXT ACTION</label><input class="field-input" id="callNextAction"></div>`;
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveCallBtn">Add Call</button></div>`;
+    document.getElementById('callerModal').style.display = 'flex';
+    document.getElementById('saveCallBtn')?.addEventListener('click', () => {
+      const callData = {
+        company: document.getElementById('callCompany')?.value,
+        duration: parseInt(document.getElementById('callDuration')?.value) || 0,
+        outcome: document.getElementById('callOutcome')?.value,
+        painNotes: document.getElementById('callPainNotes')?.value,
+        nextAction: document.getElementById('callNextAction')?.value
+      };
+      addCallLog(currentCallerId, callData);
+      document.getElementById('callerModal').style.display = 'none';
+    });
+    document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('callerModal').style.display = 'none');
+  }
+
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); 
+  }
+
+  document.getElementById('addCallerBtn').onclick = openAddCallerModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
+  document.getElementById('closeModalBtn').onclick = () => document.getElementById('callerModal').style.display = 'none';
+  document.getElementById('closeLogModalBtn').onclick = () => document.getElementById('callLogModal').style.display = 'none';
+  document.getElementById('closeLogFooterBtn').onclick = () => document.getElementById('callLogModal').style.display = 'none';
+  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+
+  // Initial load
+  callers = getCallersFromAPI();
+  updateDate();
+  renderAll();
+  
+  // Auto-refresh every 60 seconds
+  setInterval(() => {
+    if (localStorage.getItem('niche_token')) {
+      refreshData();
+    }
+  }, 60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Niche CRM — Freelancers Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-deep: #0b0b0e;
+      --blue-primary: #2b2fff;
+      --blue-hover: #4f5aff;
+      --blue-glow: rgba(43, 47, 255, 0.35);
+      --surface-card: rgba(255, 255, 255, 0.04);
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --text-primary: #ededf2;
+      --text-muted: rgba(237, 237, 242, 0.4);
+      --error-red: #ef4444;
+      --success-green: #10b981;
+      --warning-orange: #f59e0b;
+      --cyan: #06b6d4;
+      --purple: #818cf8;
+      --transition: all 0.2s ease;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+      background-size: 30px 30px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 520px; height: 520px; background: rgba(43, 47, 255, 0.13); top: -140px; left: -140px; }
+    .blob-2 { width: 380px; height: 380px; background: rgba(43, 47, 255, 0.08); bottom: -80px; right: -80px; }
+    .blob-3 { width: 220px; height: 220px; background: rgba(43, 47, 255, 0.07); top: 50%; left: 55%; transform: translate(-50%, -50%); }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 260px;
+      height: 100vh;
+      background: rgba(13, 16, 23, 0.98);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid var(--border-subtle);
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-brand {
+      padding: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: center;
+    }
+    .brand-name { font-size: 18px; font-weight: 700; color: white; }
+    .brand-sub { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 3px; }
+
+    .nav-section {
+      color: #374151;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 20px 20px 8px 20px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      margin: 2px 12px;
+      border-radius: 10px;
+      color: #9ca3af;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      text-decoration: none;
+    }
+    .nav-item i { width: 20px; font-size: 16px; font-style: normal; }
+    .nav-item:hover { background: rgba(255,255,255,0.05); color: #e5e7eb; }
+    .nav-item.active { background: rgba(43,47,255,0.15); color: white; border-left: 3px solid var(--blue-primary); }
+
+    .logout-wrapper {
+      margin-top: auto;
+      padding: 20px 16px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .logout-btn {
+      width: 100%;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 10px;
+      padding: 12px;
+      color: #ef4444;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      border: none;
+    }
+    .logout-btn:hover { background: rgba(239,68,68,0.2); }
+
+    /* Main content */
+    .main-content {
+      margin-left: 260px;
+      padding: 24px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header */
+    .top-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .page-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .page-date {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .btn-add {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-add:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .refresh-btn {
+      background: rgba(43,47,255,0.15);
+      border: 1px solid rgba(43,47,255,0.3);
+      border-radius: 30px;
+      padding: 8px 16px;
+      color: var(--blue-primary);
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .refresh-btn:hover { background: rgba(43,47,255,0.25); }
+
+    /* Stats row */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 20px;
+      transition: var(--transition);
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(43,47,255,0.3); }
+    .stat-value { font-size: 32px; font-weight: 700; }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 8px; }
+    .color-violet { color: #818cf8; }
+    .color-green { color: #34d399; }
+    .color-gold { color: #fbbf24; }
+    .color-emerald { color: #10b981; }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .filter-chip {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 30px;
+      padding: 6px 16px;
+      color: #9ca3af;
+      font-size: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .filter-chip.active { background: rgba(43,47,255,0.15); color: var(--blue-primary); border-color: var(--blue-primary); }
+    .filter-chip:hover { background: rgba(43,47,255,0.1); color: white; }
+
+    /* Freelancers grid */
+    .freelancers-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .freelancer-card {
+      background: var(--surface-card);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: var(--transition);
+    }
+    .freelancer-card:hover { transform: translateX(4px); border-color: rgba(43,47,255,0.3); }
+    .card-header {
+      background: rgba(43,47,255,0.1);
+      padding: 18px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .card-header h3 { font-size: 18px; font-weight: 600; color: white; }
+    .score-badge { padding: 6px 14px; border-radius: 30px; font-size: 14px; font-weight: 700; }
+    .score-A { background: rgba(16,185,129,0.2); color: #10b981; }
+    .score-B { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .score-C { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    .score-D { background: rgba(239,68,68,0.2); color: #ef4444; }
+
+    .card-body { padding: 24px; }
+    .info-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-subtle); }
+    .info-item .label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-item .value { font-size: 14px; font-weight: 500; color: white; margin-top: 4px; }
+
+    .skills { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+    .skill-tag { background: rgba(43,47,255,0.15); padding: 4px 12px; border-radius: 20px; font-size: 11px; color: #818cf8; }
+
+    .stats-detail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat-detail-card { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 12px; text-align: center; transition: var(--transition); }
+    .stat-detail-card:hover { background: rgba(255,255,255,0.06); transform: scale(1.02); }
+    .stat-detail-number { font-size: 22px; font-weight: 700; }
+    .stat-detail-label { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+
+    .work-history { background: rgba(0,0,0,0.2); border-radius: 12px; padding: 12px 16px; margin: 16px 0; }
+    .work-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; }
+    .work-item:last-child { border-bottom: none; }
+
+    .action-buttons { display: flex; gap: 12px; margin-top: 16px; }
+    .btn-tasks, .btn-history, .btn-edit, .btn-delete {
+      flex: 1; padding: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);
+      border-radius: 8px; color: #9ca3af; font-size: 12px; cursor: pointer; text-align: center; transition: var(--transition);
+    }
+    .btn-tasks:hover, .btn-history:hover, .btn-edit:hover { background: rgba(43,47,255,0.15); color: white; }
+    .btn-delete:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    /* Loading spinner */
+    .loading-spinner { text-align: center; padding: 40px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid rgba(43,47,255,0.2); border-top-color: #2b2fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Toast notification */
+    .toast { position: fixed; bottom: 30px; right: 30px; background: #10b981; color: white; padding: 12px 24px; border-radius: 10px; font-size: 14px; z-index: 1100; animation: slideIn 0.3s ease; }
+    .toast.error { background: #ef4444; }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+    /* Modal */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; }
+    .modal { background: #111520; border: 1px solid var(--border-subtle); border-radius: 20px; width: 750px; max-width: 90%; max-height: 85vh; overflow-y: auto; padding: 28px; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h3 { font-size: 20px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: #6b7280; font-size: 20px; cursor: pointer; }
+    .field-group { margin-bottom: 14px; }
+    .field-label { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px; }
+    .field-input, .field-select, .field-textarea { width: 100%; background: #1a1f2e; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 12px; color: white; font-size: 13px; font-family: inherit; }
+    .field-textarea { min-height: 80px; resize: vertical; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-subtle); }
+    .btn-cancel { background: transparent; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 16px; color: #9ca3af; cursor: pointer; }
+    .btn-save { background: linear-gradient(135deg, #4f46e5, #7c3aed); border: none; border-radius: 8px; padding: 8px 20px; color: white; font-weight: 600; cursor: pointer; }
+
+    /* Task Card Table */
+    .tasks-table { width: 100%; border-collapse: collapse; }
+    .tasks-table th { text-align: left; padding: 10px 8px; color: #4b5563; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid var(--border-subtle); }
+    .tasks-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: #d1d5db; }
+    .task-status { display: inline-block; padding: 3px 8px; border-radius: 20px; font-size: 10px; }
+    .status-todo { background: rgba(107,114,128,0.2); color: #9ca3af; }
+    .status-progress { background: rgba(59,130,246,0.2); color: #60a5fa; }
+    .status-review { background: rgba(245,158,11,0.2); color: #f59e0b; }
+    .status-done { background: rgba(16,185,129,0.2); color: #10b981; }
+    .priority-high { color: #ef4444; font-weight: 600; }
+    .priority-medium { color: #f59e0b; }
+    .priority-low { color: #10b981; }
+
+    .empty-state { text-align: center; padding: 40px; color: #6b7280; }
+
+    @media (max-width: 900px) {
+      .sidebar { width: 80px; }
+      .sidebar .brand-name, .sidebar .brand-sub, .sidebar .nav-item span { display: none; }
+      .main-content { margin-left: 80px; padding: 16px; }
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+      .info-grid { grid-template-columns: repeat(2,1fr); }
+      .stats-detail { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+  <link rel="stylesheet" href="/assets/glass-nav.css" />
+  <script src="/assets/glass-nav.js" defer></script>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <div style="width: 110px; height: 110px; border-radius: 50%; background: white; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;">
+      <img src="/assets/logo-niche.png" alt="Logo" style="width: 96px; height: 96px; object-fit: contain;">
+    </div>
+    <div><div class="brand-name">Niche</div><div class="brand-sub">CRM PLATFORM</div></div>
+  </div>
+  <div class="nav-section">MAIN</div>
+  <a href="/index.html" class="nav-item"><i>📊</i> <span>Dashboard</span></a>
+  <a href="/page/pipeline.html" class="nav-item"><i>🔀</i> <span>Pipeline</span></a>
+  <div class="nav-section">PEOPLE</div>
+  <a href="/page/cold-callers.html" class="nav-item"><i>📞</i> <span>Cold Callers</span></a>
+  <a href="/page/outreachers.html" class="nav-item"><i>✉️</i> <span>Outreachers</span></a>
+  <a href="/page/freelancers.html" class="nav-item active"><i>👤</i> <span>Freelancers</span></a>
+  <a href="/page/clients.html" class="nav-item"><i>🏢</i> <span>Clients</span></a>
+  <div class="nav-section">WORK</div>
+  <a href="/page/tasks.html" class="nav-item"><i>✓</i> <span>Tasks</span></a>
+  <a href="/page/projects.html" class="nav-item"><i>📁</i> <span>Projects</span></a>
+  <a href="/page/finance.html" class="nav-item"><i>💰</i> <span>Finance</span></a>
+  <a href="/page/analytics.html" class="nav-item"><i>📈</i> <span>Analytics</span></a>
+  <div class="logout-wrapper"><button class="logout-btn" id="logoutBtn"><i>🚪</i> <span>Logout</span></button></div>
+</div>
+
+<div class="main-content">
+  <div class="top-header">
+    <div class="page-title">
+      <h1>Freelancers</h1>
+      <div class="page-date" id="currentDate"></div>
+    </div>
+    <div>
+      <button class="refresh-btn" id="refreshBtn">⟳ Refresh</button>
+      <button class="btn-add" id="addFreelancerBtn">+ Add Freelancer</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-value color-violet" id="totalFreelancers">0</div><div class="stat-label">TOTAL FREELANCERS</div></div>
+    <div class="stat-card"><div class="stat-value color-green" id="activeFreelancers">0</div><div class="stat-label">ACTIVE</div></div>
+    <div class="stat-card"><div class="stat-value color-gold" id="avgRating">0.0</div><div class="stat-label">AVG RATING</div></div>
+    <div class="stat-card"><div class="stat-value color-emerald" id="totalProjects">0</div><div class="stat-label">PROJECTS DONE</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-chip active" data-filter="all">🔍 All Skills</div>
+    <div class="filter-chip" data-filter="rating">⭐ Rating: Highest First</div>
+    <div class="filter-chip" data-filter="rate">💰 Rate: Low to High</div>
+    <div class="filter-chip" data-filter="active">📊 Available Only</div>
+  </div>
+
+  <div id="freelancersContainer" class="freelancers-grid">
+    <div class="loading-spinner"><div class="spinner"></div>Loading freelancers...</div>
+  </div>
+</div>
+
+<!-- Modal Add/Edit Freelancer -->
+<div id="freelancerModal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modalTitle">Add Freelancer</h3><button class="modal-close" id="closeModalBtn">✕</button></div>
+    <div id="modalBody"></div>
+    <div id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- Modal Tasks -->
+<div id="tasksModal" class="modal-overlay">
+  <div class="modal" style="width: 850px;">
+    <div class="modal-header"><h3 id="tasksTitle">Tasks</h3><button class="modal-close" id="closeTasksModalBtn">✕</button></div>
+    <div id="tasksBody"></div>
+    <div class="modal-footer"><button class="btn-cancel" id="closeTasksFooterBtn">Close</button><button class="btn-save" id="addTaskBtn">+ Add Task</button></div>
+  </div>
+</div>
+
+<!-- Modal Work History -->
+<div id="historyModal" class="modal-overlay">
+  <div class="modal" style="width: 700px;">
+    <div class="modal-header"><h3 id="historyTitle">Work History</h3><button class="modal-close" id="closeHistoryBtn">✕</button></div>
+    <div id="historyBody"></div>
+    <div class="modal-footer"><button class="btn-cancel" id="closeHistoryFooterBtn">Close</button><button class="btn-save" id="addHistoryBtn">+ Add Project</button></div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // FREELANCERS MANAGEMENT — PostgreSQL API
+  // ============================================================
+
+  if (!localStorage.getItem('niche_token')) {
+    window.location.href = '/login.html';
+  }
+
+  let freelancers = [];
+  let currentFreelancerId = null;
+  let currentTasksFreelancerId = null;
+  let currentHistoryFreelancerId = null;
+  let currentFilter = 'all';
+
+  const API_BASE = '/api';
+
+  function authHeaders(json = true) {
+    const h = { 'Authorization': `Bearer ${localStorage.getItem('niche_token')}` };
+    if (json) h['Content-Type'] = 'application/json';
+    return h;
+  }
+
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type === 'error' ? 'error' : ''}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  function calculateScore(f) {
+    const avgRating = Number(f.rating || 0);
+    let score = 'D';
+    if (avgRating >= 4.5) score = 'A';
+    else if (avgRating >= 3.5) score = 'B';
+    else if (avgRating >= 2.5) score = 'C';
+    return { score, avgRating };
+  }
+
+  async function fetchFreelancersFromAPI() {
+    const response = await fetch(`${API_BASE}/freelancers`, { headers: authHeaders(false) });
+    if (!response.ok) throw new Error('Failed to load freelancers');
+    freelancers = await response.json();
+  }
+
+  function getFilteredFreelancers() {
+    let filtered = [...freelancers];
+    if (currentFilter === 'rating') {
+      filtered.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+    } else if (currentFilter === 'rate') {
+      filtered.sort((a, b) => (Number(a.hourlyRate) || parseFloat(a.rate) || 0) - (Number(b.hourlyRate) || parseFloat(b.rate) || 0));
+    } else if (currentFilter === 'active') {
+      filtered = filtered.filter(f => f.status === 'active');
+    }
+    return filtered;
+  }
+
+  async function refreshData() {
+    document.getElementById('freelancersContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Refreshing...</div>';
+    try {
+      await fetchFreelancersFromAPI();
+      renderAll();
+      showToast('Data refreshed from API');
+    } catch (e) {
+      console.error(e);
+      showToast('Failed to refresh', 'error');
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      return m;
+    });
+  }
+
+  function renderAll() { updateStats(); renderFreelancers(); }
+
+  function updateStats() {
+    const total = freelancers.length;
+    const active = freelancers.filter(f => f.status === 'active').length;
+    let ratingSum = 0;
+    let totalProjects = 0;
+    freelancers.forEach(f => {
+      ratingSum += Number(f.rating || 0);
+      totalProjects += Number(f.completedTasks || 0) + Number(f.placementCount || 0);
+    });
+    const avgRatingValue = total > 0 ? (ratingSum / total).toFixed(1) : '0.0';
+    document.getElementById('totalFreelancers').innerText = total;
+    document.getElementById('activeFreelancers').innerText = active;
+    document.getElementById('avgRating').innerText = avgRatingValue;
+    document.getElementById('totalProjects').innerText = totalProjects;
+  }
+
+  function renderFreelancers() {
+    const container = document.getElementById('freelancersContainer');
+    const filteredFreelancers = getFilteredFreelancers();
+    
+    if(filteredFreelancers.length === 0) { 
+      container.innerHTML = '<div class="empty-state">No freelancers yet. Click "+ Add Freelancer" to get started.</div>'; 
+      return; 
+    }
+    
+    container.innerHTML = filteredFreelancers.map(f => {
+      const { score, avgRating } = calculateScore(f);
+      const skills = f.skills ? f.skills.split(',').map(s => s.trim()) : [];
+      const tasksCount = f.taskCount || 0;
+      const pendingTasks = f.pendingTasks || 0;
+      const workCount = (f.completedTasks || 0) + (f.placementCount || 0);
+      const rateDisplay = f.hourlyRate ? `$${Number(f.hourlyRate).toLocaleString()}/hr` : (f.rate || '-');
+      return `
+        <div class="freelancer-card">
+          <div class="card-header"><h3>${escapeHtml(f.name) || 'Unnamed'}</h3><div class="score-badge score-${score}">${score}</div></div>
+          <div class="card-body">
+            <div class="info-grid">
+              <div class="info-item"><div class="label">USERNAME</div><div class="value">${escapeHtml(f.username) || '-'}</div></div>
+              <div class="info-item"><div class="label">PHONE</div><div class="value">${escapeHtml(f.phone) || '-'}</div></div>
+              <div class="info-item"><div class="label">EMAIL</div><div class="value">${escapeHtml(f.email) || '-'}</div></div>
+              <div class="info-item"><div class="label">STATUS</div><div class="value">${f.status || 'active'}</div></div>
+            </div>
+            <div class="info-grid">
+              <div class="info-item"><div class="label">SPECIALIZATION</div><div class="value">${escapeHtml(f.specialization) || '-'}</div></div>
+              <div class="info-item"><div class="label">RATE</div><div class="value">${escapeHtml(rateDisplay)}</div></div>
+              <div class="info-item"><div class="label">TIMEZONE</div><div class="value">${escapeHtml(f.timezone) || '-'}</div></div>
+              <div class="info-item"><div class="label">SINCE</div><div class="value">${f.createdAt || '-'}</div></div>
+            </div>
+            <div class="skills">${skills.map(s => `<span class="skill-tag">${escapeHtml(s)}</span>`).join('')}</div>
+            <div class="stats-detail">
+              <div class="stat-detail-card"><div class="stat-detail-number">${avgRating.toFixed(1)}</div><div class="stat-detail-label">⭐ Rating / 5</div></div>
+              <div class="stat-detail-card"><div class="stat-detail-number">${workCount}</div><div class="stat-detail-label">📁 Projects Done</div></div>
+              <div class="stat-detail-card"><div class="stat-detail-number">${f.placementCount || 0}</div><div class="stat-detail-label">Placements</div></div>
+              <div class="stat-detail-card"><div class="stat-detail-number">${pendingTasks}</div><div class="stat-detail-label">📋 Pending Tasks</div></div>
+            </div>
+            <div class="work-history"><div class="work-item"><span>Portfolio:</span><span>${f.portfolio ? `<a href="${escapeHtml(f.portfolio)}" target="_blank" rel="noopener" style="color:#818cf8">Open</a>` : '-'}</span></div></div>
+            <div class="action-buttons">
+              <div class="btn-tasks" onclick="openTasksModal('${f.id}')">Tasks (${tasksCount})</div>
+              <div class="btn-history" onclick="openHistoryModal('${f.id}')">Work History (${workCount})</div>
+            </div>
+            <div class="action-buttons" style="margin-top:8px">
+              <div class="btn-tasks" onclick="window.location.href='/page/freelancer-portal.html?freelancerId=${f.id}'">Open Portal</div>
+              <div class="btn-edit" onclick="openEditFreelancer('${f.id}')">Edit</div>
+              <div class="btn-delete" onclick="deleteFreelancerAPI('${f.id}')">Delete</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openAddFreelancerModal() { 
+    currentFreelancerId = null; 
+    document.getElementById('modalTitle').innerText = 'Add Freelancer'; 
+    document.getElementById('modalBody').innerHTML = getFreelancerFormHtml({}, true); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Add Freelancer</button></div>`; 
+    document.getElementById('freelancerModal').style.display = 'flex'; 
+    attachFreelancerModalEvents(true); 
+  }
+  
+  function openEditFreelancer(id) { 
+    currentFreelancerId = id; 
+    const f = freelancers.find(f => String(f.id) === String(id)); 
+    document.getElementById('modalTitle').innerText = 'Edit Freelancer'; 
+    document.getElementById('modalBody').innerHTML = getFreelancerFormHtml(f, false); 
+    document.getElementById('modalFooter').innerHTML = `<div></div><div><button class="btn-cancel" id="cancelModalBtn">Cancel</button><button class="btn-save" id="saveModalBtn">Save Changes</button></div>`; 
+    document.getElementById('freelancerModal').style.display = 'flex'; 
+    attachFreelancerModalEvents(false); 
+  }
+
+  function getFreelancerFormHtml(f, isAdd) {
+    const passwordField = isAdd ? `<div class="field-group"><label class="field-label">PASSWORD (login)</label><input class="field-input" type="password" id="fPassword" placeholder="Default: Freelancer123!"></div>` : '';
+    return `<div style="display:grid; grid-template-columns:1fr 1fr; gap:16px">
+      <div><div class="field-group"><label class="field-label">FULL NAME *</label><input class="field-input" id="fName" value="${escapeHtml(f.name || '')}"></div>
+      <div class="field-group"><label class="field-label">USERNAME</label><input class="field-input" id="fUsername" value="${escapeHtml(f.username || '')}"></div>
+      <div class="field-group"><label class="field-label">PHONE</label><input class="field-input" id="fPhone" value="${escapeHtml(f.phone || '')}"></div>
+      <div class="field-group"><label class="field-label">EMAIL *</label><input class="field-input" id="fEmail" value="${escapeHtml(f.email || '')}"></div>
+      <div class="field-group"><label class="field-label">SPECIALIZATION</label><input class="field-input" id="fSpecialization" value="${escapeHtml(f.specialization || f.niche || '')}"></div>
+      <div class="field-group"><label class="field-label">SKILLS (comma separated)</label><input class="field-input" id="fSkills" value="${escapeHtml(f.skills || '')}"></div></div>
+      <div><div class="field-group"><label class="field-label">RATE ($/hr)</label><input class="field-input" type="number" id="fRate" value="${escapeHtml(String(f.hourlyRate || f.rate || ''))}"></div>
+      <div class="field-group"><label class="field-label">RATING (0-5)</label><input class="field-input" type="number" step="0.1" min="0" max="5" id="fRating" value="${f.rating ?? ''}"></div>
+      <div class="field-group"><label class="field-label">TIMEZONE</label><input class="field-input" id="fTimezone" value="${escapeHtml(f.timezone || '')}"></div>
+      <div class="field-group"><label class="field-label">PORTFOLIO URL</label><input class="field-input" id="fPortfolio" value="${escapeHtml(f.portfolio || '')}"></div>
+      <div class="field-group"><label class="field-label">STATUS</label><select class="field-select" id="fStatus"><option value="active" ${f.status==='active'?'selected':''}>active</option><option value="inactive" ${f.status==='inactive'?'selected':''}>inactive</option></select></div>
+      ${passwordField}</div>
+    </div>`;
+  }
+
+  function collectFreelancerForm(isAdd) {
+    const data = {
+      name: document.getElementById('fName')?.value?.trim(),
+      username: document.getElementById('fUsername')?.value?.trim(),
+      phone: document.getElementById('fPhone')?.value?.trim(),
+      email: document.getElementById('fEmail')?.value?.trim(),
+      specialization: document.getElementById('fSpecialization')?.value?.trim(),
+      skills: document.getElementById('fSkills')?.value?.trim(),
+      rate: document.getElementById('fRate')?.value,
+      rating: document.getElementById('fRating')?.value,
+      timezone: document.getElementById('fTimezone')?.value?.trim(),
+      portfolio: document.getElementById('fPortfolio')?.value?.trim(),
+      status: document.getElementById('fStatus')?.value
+    };
+    if (isAdd) data.password = document.getElementById('fPassword')?.value || 'Freelancer123!';
+    return data;
+  }
+
+  async function saveFreelancerAPI(isAdd) {
+    const data = collectFreelancerForm(isAdd);
+    if (!data.name || !data.email) {
+      showToast('Name and email are required', 'error');
+      return;
+    }
+    try {
+      const url = isAdd ? `${API_BASE}/freelancers` : `${API_BASE}/freelancers/${currentFreelancerId}`;
+      const res = await fetch(url, {
+        method: isAdd ? 'POST' : 'PUT',
+        headers: authHeaders(),
+        body: JSON.stringify(data)
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body.message || 'Save failed');
+      document.getElementById('freelancerModal').style.display = 'none';
+      showToast(isAdd ? 'Freelancer created in database' : 'Freelancer updated');
+      await fetchFreelancersFromAPI();
+      renderAll();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  async function deleteFreelancerAPI(id) {
+    if (!confirm('Delete this freelancer from the database?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/freelancers/${id}`, { method: 'DELETE', headers: authHeaders(false) });
+      if (!res.ok) throw new Error('Delete failed');
+      showToast('Freelancer deleted');
+      await fetchFreelancersFromAPI();
+      renderAll();
+    } catch (e) {
+      showToast(e.message, 'error');
+    }
+  }
+
+  function attachFreelancerModalEvents(isAdd) {
+    document.getElementById('cancelModalBtn')?.addEventListener('click', () => document.getElementById('freelancerModal').style.display = 'none');
+    document.getElementById('saveModalBtn')?.addEventListener('click', () => saveFreelancerAPI(isAdd));
+  }
+
+  async function openTasksModal(freelancerId) {
+    currentTasksFreelancerId = freelancerId;
+    const f = freelancers.find(x => String(x.id) === String(freelancerId));
+    document.getElementById('tasksTitle').innerText = `Tasks — ${f?.name || 'Freelancer'}`;
+    document.getElementById('tasksBody').innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    document.getElementById('tasksModal').style.display = 'flex';
+    try {
+      const res = await fetch(`${API_BASE}/freelancers/${freelancerId}/tasks`, { headers: authHeaders(false) });
+      const tasks = res.ok ? await res.json() : [];
+      if (!tasks.length) {
+        document.getElementById('tasksBody').innerHTML = '<div class="empty-state">No tasks assigned. Use "+ Add Task" or assign from Tasks page.</div>';
+        return;
+      }
+      let html = '<table class="tasks-table"><thead><tr><th>TASK</th><th>CLIENT</th><th>DEADLINE</th><th>PRIORITY</th><th>STATUS</th><th>PORTAL</th><th></th></tr></thead><tbody>';
+      tasks.forEach(t => {
+        let statusClass = 'status-todo';
+        const st = (t.status || '').toLowerCase();
+        if (st.includes('progress')) statusClass = 'status-progress';
+        else if (st.includes('review')) statusClass = 'status-review';
+        else if (st.includes('done') || st.includes('complete')) statusClass = 'status-done';
+        const pri = (t.priority || 'Medium').toLowerCase();
+        const priorityClass = pri.includes('high') ? 'priority-high' : pri.includes('low') ? 'priority-low' : 'priority-medium';
+        html += `<tr>
+          <td><strong>${escapeHtml(t.name) || '-'}</strong></td>
+          <td>${escapeHtml(t.client) || '-'}</td>
+          <td>${t.deadline || '-'}</td>
+          <td class="${priorityClass}">${t.priority || 'Medium'}</td>
+          <td><span class="task-status ${statusClass}">${t.status || 'To Do'}</span></td>
+          <td>${t.visibleToClient ? 'Visible' : 'Internal'}</td>
+          <td><button class="btn-cancel" style="padding:4px 8px;font-size:10px" onclick="deleteTaskAPI('${freelancerId}','${t.id}')">Delete</button></td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('tasksBody').innerHTML = html;
+    } catch (e) {
+      document.getElementById('tasksBody').innerHTML = '<div class="empty-state">Failed to load tasks</div>';
+    }
+  }
+
+  async function deleteTaskAPI(freelancerId, taskId) {
+    if (!confirm('Delete this task?')) return;
+    try {
+      const res = await fetch(`${API_BASE}/tasks/${taskId}`, { method: 'DELETE', headers: authHeaders(false) });
+      if (!res.ok) throw new Error();
+      showToast('Task deleted');
+      await fetchFreelancersFromAPI();
+      renderAll();
+      openTasksModal(freelancerId);
+    } catch {
+      showToast('Failed to delete task', 'error');
+    }
+  }
+
+  async function addTaskToFreelancer() {
+    const name = prompt('Task name:');
+    if (!name) return;
+    const client = prompt('Project / client name:') || '';
+    const deadline = prompt('Deadline (YYYY-MM-DD):') || '';
+    const priority = prompt('Priority (High/Medium/Low):', 'Medium') || 'Medium';
+    const visibleToClient = confirm('Visible to client in portal?');
+    try {
+      const res = await fetch(`${API_BASE}/tasks`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          name,
+          client,
+          assigned_to: parseInt(currentTasksFreelancerId, 10),
+          deadline,
+          priority,
+          status: 'To Do',
+          visibleToClient
+        })
+      });
+      if (!res.ok) throw new Error();
+      showToast('Task assigned via API');
+      await fetchFreelancersFromAPI();
+      renderAll();
+      openTasksModal(currentTasksFreelancerId);
+    } catch {
+      showToast('Failed to create task', 'error');
+    }
+  }
+
+  async function openHistoryModal(freelancerId) {
+    currentHistoryFreelancerId = freelancerId;
+    const f = freelancers.find(x => String(x.id) === String(freelancerId));
+    document.getElementById('historyTitle').innerText = `Work History — ${f?.name || 'Freelancer'}`;
+    document.getElementById('historyBody').innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    document.getElementById('historyModal').style.display = 'flex';
+    try {
+      const res = await fetch(`${API_BASE}/freelancers/${freelancerId}/history`, { headers: authHeaders(false) });
+      const history = res.ok ? await res.json() : [];
+      if (!history.length) {
+        document.getElementById('historyBody').innerHTML = '<div class="empty-state">No completed tasks or placements yet.</div>';
+        return;
+      }
+      let html = '<table class="tasks-table"><thead><tr><th>TYPE</th><th>PROJECT</th><th>CLIENT</th><th>STATUS</th><th>DATE</th></tr></thead><tbody>';
+      history.forEach(h => {
+        html += `<tr>
+          <td>${h.type === 'placement' ? 'Placement' : 'Task'}</td>
+          <td><strong>${escapeHtml(h.projectName) || '-'}</strong></td>
+          <td>${escapeHtml(h.client) || '-'}</td>
+          <td>${escapeHtml(h.status) || '-'}</td>
+          <td>${h.date || '-'}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+      document.getElementById('historyBody').innerHTML = html;
+    } catch (e) {
+      document.getElementById('historyBody').innerHTML = '<div class="empty-state">Failed to load history</div>';
+    }
+  }
+
+  function updateDate() { 
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' }); 
+  }
+
+  // Filter chips
+  document.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      currentFilter = chip.dataset.filter || 'all';
+      renderFreelancers();
+    });
+  });
+
+  document.getElementById('addFreelancerBtn').onclick = openAddFreelancerModal;
+  document.getElementById('refreshBtn').onclick = refreshData;
+  document.getElementById('closeModalBtn').onclick = () => document.getElementById('freelancerModal').style.display = 'none';
+  document.getElementById('closeTasksModalBtn').onclick = () => document.getElementById('tasksModal').style.display = 'none';
+  document.getElementById('closeTasksFooterBtn').onclick = () => document.getElementById('tasksModal').style.display = 'none';
+  document.getElementById('addTaskBtn').onclick = addTaskToFreelancer;
+  document.getElementById('closeHistoryBtn').onclick = () => document.getElementById('historyModal').style.display = 'none';
+  document.getElementById('closeHistoryFooterBtn').onclick = () => document.getElementById('historyModal').style.display = 'none';
+  document.getElementById('addHistoryBtn').onclick = () => window.location.href = '/page/staffing.html';
+  document.getElementById('addHistoryBtn').innerText = '+ Add Placement';
+  document.getElementById('logoutBtn').onclick = () => { localStorage.clear(); window.location.href = '/login.html'; };
+
+  async function init() {
+    document.getElementById('freelancersContainer').innerHTML = '<div class="loading-spinner"><div class="spinner"></div>Loading from API...</div>';
+    try {
+      await fetchFreelancersFromAPI();
+      renderAll();
+    } catch (e) {
+      document.getElementById('freelancersContainer').innerHTML = '<div class="empty-state">Failed to load freelancers. Check server and database.</div>';
+    }
+  }
+
+  updateDate();
+  init();
+  setInterval(() => { if (localStorage.getItem('niche_token')) refreshData(); }, 60000);
+</script>
+</body>
+</html>
