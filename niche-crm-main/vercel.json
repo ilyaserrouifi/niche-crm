@@ -1,39 +1,16 @@
 {
-    "version":  2,
-    "builds":  [
-                   {
-                       "src":  "backend/server.js",
-                       "use":  "@vercel/node"
-                   },
-                   {
-                       "src":  "**/*.html",
-                       "use":  "@vercel/static"
-                   },
-                   {
-                       "src":  "assets/**",
-                       "use":  "@vercel/static"
-                   }
-               ],
-    "routes":  [
-                   {
-                       "src":  "/api/(.*)",
-                       "dest":  "/backend/server.js"
-                   },
-                   {
-                       "src":  "/",
-                       "dest":  "/login.html"
-                   },
-                   {
-                       "src":  "/(.*\\.html)",
-                       "dest":  "/$1"
-                   },
-                   {
-                       "src":  "/assets/(.*)",
-                       "dest":  "/assets/$1"
-                   },
-                   {
-                       "src":  "/page/(.*)",
-                       "dest":  "/page/$1"
-                   }
-               ]
+  "version": 2,
+  "builds": [
+    { "src": "backend/server.js", "use": "@vercel/node" },
+    { "src": "*.html", "use": "@vercel/static" },
+    { "src": "page/*.html", "use": "@vercel/static" },
+    { "src": "assets/**", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/backend/server.js" },
+    { "src": "/", "dest": "/login.html" },
+    { "src": "/page/(.*)", "dest": "/page/$1" },
+    { "src": "/(.*\\.html)", "dest": "/$1" },
+    { "src": "/assets/(.*)", "dest": "/assets/$1" }
+  ]
 }
